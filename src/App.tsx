@@ -3,7 +3,8 @@ import {
   Users, CheckCircle2, XCircle, Clock, Printer, Download, Search, 
   Plus, Trash2, Edit, ShieldCheck, FileText, BarChart3, Calendar, 
   MapPin, UserCheck, RefreshCw, Check, AlertCircle, QrCode, Sparkles,
-  ArrowRight, ShieldAlert, CheckSquare, Layers, HelpCircle, CreditCard, Lock, Unlock, UserCog, Radio, Activity
+  ArrowRight, ShieldAlert, CheckSquare, Layers, HelpCircle, CreditCard, Lock, Unlock, UserCog, Radio, Activity,
+  AlertTriangle, X
 } from 'lucide-react';
 import { db } from './firebase';
 import { 
@@ -21,23 +22,28 @@ export interface Participant {
   nota?: string;
 }
 
+export const cleanJawatan = (j: string): string => {
+  if (!j) return '';
+  return j.replace(/\s*\(DG\d*\)/gi, '').trim();
+};
+
 export const DEFAULT_PARTICIPANTS: Participant[] = [
-  { id: '1', namaPenuh: 'ALIZAH BINTI ABD SUILI', noKp: '800808125208', email: 'g-08232901@moe-dl.edu.my', jawatan: 'Guru Prasekolah (DG9)', status: 'Belum Hadir' },
-  { id: '2', namaPenuh: 'ASNAH BINTI MD DANIL', noKp: '790929125478', email: 'g-78232902@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-  { id: '3', namaPenuh: 'MOHD ZAHARI BIN TIBIN', noKp: '730401125977', email: 'g-77263791@moe-dl.edu.my', jawatan: 'Guru Besar (DG6)', status: 'Belum Hadir' },
-  { id: '4', namaPenuh: 'NURTITAH BINTI MEMBUAI', noKp: '680807125966', email: 'g-6632911@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-  { id: '5', namaPenuh: 'FAIRUZ @ SITI FAIRUZ BINTI ABD RAHMAN', noKp: '741008125106', email: 'g-06232904@moe-dl.edu.my', jawatan: 'Guru Penolong Kanan HEM (DG5)', status: 'Belum Hadir' },
-  { id: '6', namaPenuh: 'DAYANG SABARIAH @ MILAH BINTI JOAS', noKp: '720817125330', email: 'g-30232903@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-  { id: '7', namaPenuh: 'ROHIDAH @ NORIDAH BINTI MASLIN', noKp: '720708125366', email: 'g-6632912@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-  { id: '8', namaPenuh: 'SARIPAH BINTI OMAR', noKp: '721113125046', email: 'g-46233078@moe-dl.edu.my', jawatan: 'Guru Pemulihan (DG5)', status: 'Belum Hadir' },
-  { id: '9', namaPenuh: 'SITI HABIBAH BINTI TAIP', noKp: '820303125286', email: 'g-86233208@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-  { id: '10', namaPenuh: 'NORADILAH BINTI RIBUT', noKp: '810929125238', email: 'g-38232909@moe-dl.edu.my', jawatan: 'Guru Pendidikan Islam (DG9)', status: 'Belum Hadir' },
-  { id: '11', namaPenuh: 'NORMAWATI BINTI ISMAIL', noKp: '840406035740', email: 'g-40232910@moe-dl.edu.my', jawatan: 'Guru Pendidikan Islam (DG9)', status: 'Belum Hadir' },
+  { id: '1', namaPenuh: 'ALIZAH BINTI ABD SUILI', noKp: '800808125208', email: 'g-08232901@moe-dl.edu.my', jawatan: 'Guru Prasekolah', status: 'Belum Hadir' },
+  { id: '2', namaPenuh: 'ASNAH BINTI MD DANIL', noKp: '790929125478', email: 'g-78232902@moe-dl.edu.my', jawatan: 'Guru Akademik', status: 'Belum Hadir' },
+  { id: '3', namaPenuh: 'MOHD ZAHARI BIN TIBIN', noKp: '730401125977', email: 'g-77263791@moe-dl.edu.my', jawatan: 'Guru Besar', status: 'Belum Hadir' },
+  { id: '4', namaPenuh: 'NURTITAH BINTI MEMBUAI', noKp: '680807125966', email: 'g-6632911@moe-dl.edu.my', jawatan: 'Guru Akademik', status: 'Belum Hadir' },
+  { id: '5', namaPenuh: 'FAIRUZ @ SITI FAIRUZ BINTI ABD RAHMAN', noKp: '741008125106', email: 'g-06232904@moe-dl.edu.my', jawatan: 'Guru Penolong Kanan HEM', status: 'Belum Hadir' },
+  { id: '6', namaPenuh: 'DAYANG SABARIAH @ MILAH BINTI JOAS', noKp: '720817125330', email: 'g-30232903@moe-dl.edu.my', jawatan: 'Guru Akademik', status: 'Belum Hadir' },
+  { id: '7', namaPenuh: 'ROHIDAH @ NORIDAH BINTI MASLIN', noKp: '720708125366', email: 'g-6632912@moe-dl.edu.my', jawatan: 'Guru Akademik', status: 'Belum Hadir' },
+  { id: '8', namaPenuh: 'SARIPAH BINTI OMAR', noKp: '721113125046', email: 'g-46233078@moe-dl.edu.my', jawatan: 'Guru Pemulihan', status: 'Belum Hadir' },
+  { id: '9', namaPenuh: 'SITI HABIBAH BINTI TAIP', noKp: '820303125286', email: 'g-86233208@moe-dl.edu.my', jawatan: 'Guru Akademik', status: 'Belum Hadir' },
+  { id: '10', namaPenuh: 'NORADILAH BINTI RIBUT', noKp: '810929125238', email: 'g-38232909@moe-dl.edu.my', jawatan: 'Guru Pendidikan Islam', status: 'Belum Hadir' },
+  { id: '11', namaPenuh: 'NORMAWATI BINTI ISMAIL', noKp: '840406035740', email: 'g-40232910@moe-dl.edu.my', jawatan: 'Guru Pendidikan Islam', status: 'Belum Hadir' },
   { id: '12', namaPenuh: 'SITI HAFIZAH BINTI DURAMAN', noKp: '820611125624', email: 'g-82061112@moe-dl.edu.my', jawatan: 'Pembantu Pengurusan Murid (N1)', status: 'Belum Hadir' },
-  { id: '13', namaPenuh: 'KHAYSAR BIN MOHAMAD NOOR', noKp: '821124126181', email: 'g-81232906@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
+  { id: '13', namaPenuh: 'KHAYSAR BIN MOHAMAD NOOR', noKp: '821124126181', email: 'g-81232906@moe-dl.edu.my', jawatan: 'Guru Akademik', status: 'Belum Hadir' },
   { id: '14', namaPenuh: 'MD HAFIZUDDIN BIN MADINI', noKp: '940317126657', email: 'g-94031712@moe-dl.edu.my', jawatan: 'Pembantu Khidmat Am (H1)', status: 'Belum Hadir' },
-  { id: '15', namaPenuh: 'MIMI NUR SHAHERA BINTI HAMINUS', noKp: '970620016220', email: 'g-20510582@moe-dl.edu.my', jawatan: 'Guru Perpustakaan dan Media (DG9)', status: 'Belum Hadir' },
-  { id: '16', namaPenuh: 'NOORLIANA ERDENAA BINTI MUSNIN', noKp: '970611125994', email: 'g-94575251@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
+  { id: '15', namaPenuh: 'MIMI NUR SHAHERA BINTI HAMINUS', noKp: '970620016220', email: 'g-20510582@moe-dl.edu.my', jawatan: 'Guru Perpustakaan dan Media', status: 'Belum Hadir' },
+  { id: '16', namaPenuh: 'NOORLIANA ERDENAA BINTI MUSNIN', noKp: '970611125994', email: 'g-94575251@moe-dl.edu.my', jawatan: 'Guru Akademik', status: 'Belum Hadir' },
 ];
 
 export default function App() {
@@ -46,7 +52,9 @@ export default function App() {
       const saved = localStorage.getItem('sk_kepawa_attendance_data');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((p: Participant) => ({ ...p, jawatan: cleanJawatan(p.jawatan) }));
+        }
       }
     } catch (e) {}
     return DEFAULT_PARTICIPANTS;
@@ -72,7 +80,9 @@ export default function App() {
         const s = localStorage.getItem('sk_kepawa_attendance_data');
         if (s) {
           const parsed = JSON.parse(s);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.map((p: Participant) => ({ ...p, jawatan: cleanJawatan(p.jawatan) }));
+          }
         }
       } catch (e) {}
       return DEFAULT_PARTICIPANTS;
@@ -94,10 +104,15 @@ export default function App() {
   const [newParticipant, setNewParticipant] = useState({
     namaPenuh: '',
     noKp: '',
-    jawatan: 'Guru Akademik (DG5)'
+    jawatan: 'Guru Akademik'
   });
 
   const [selectedParticipantForCard, setSelectedParticipantForCard] = useState<Participant | null>(null);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [participantToDelete, setParticipantToDelete] = useState<Participant | null>(null);
+  const [toastNotification, setToastNotification] = useState<{ type: 'success' | 'warning' | 'error' | 'info'; message: string } | null>(null);
+  const [addFormError, setAddFormError] = useState<string | null>(null);
 
   // Fetch participants from server API (Live Cloud Sync with local fallback)
   const fetchParticipants = async () => {
@@ -106,10 +121,11 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
-          setParticipants(data);
-          localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(data));
+          const cleaned = data.map((p: Participant) => ({ ...p, jawatan: cleanJawatan(p.jawatan) }));
+          setParticipants(cleaned);
+          localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(cleaned));
           const savedAdminIc = localStorage.getItem('sk_kepawa_admin_ic') || '730401125977';
-          const foundAdmin = data.find((p: Participant) => p.noKp === savedAdminIc) || data[2] || data[0];
+          const foundAdmin = cleaned.find((p: Participant) => p.noKp === savedAdminIc) || cleaned[2] || cleaned[0];
           if (foundAdmin) setCurrentAdmin(foundAdmin);
         }
       }
@@ -142,12 +158,29 @@ export default function App() {
         } else {
           const loaded: Participant[] = [];
           snapshot.forEach(docSnap => {
-            loaded.push(docSnap.data() as Participant);
+            const item = docSnap.data() as Participant;
+            loaded.push({ ...item, jawatan: cleanJawatan(item.jawatan) });
           });
           // Sort by ID 1..16
           loaded.sort((a, b) => Number(a.id) - Number(b.id));
           setParticipants(loaded);
           localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(loaded));
+
+          // Auto-clean any records in Firestore that still have (DG...)
+          const dirtyDocs = snapshot.docs.filter(docSnap => {
+            const j = (docSnap.data() as Participant).jawatan || '';
+            return j.includes('DG');
+          });
+          if (dirtyDocs.length > 0) {
+            try {
+              const batch = writeBatch(db);
+              dirtyDocs.forEach(docSnap => {
+                const currentJawatan = (docSnap.data() as Participant).jawatan;
+                batch.update(docSnap.ref, { jawatan: cleanJawatan(currentJawatan) });
+              });
+              batch.commit().catch(e => console.warn("Firestore jawatan cleanup:", e));
+            } catch (e) {}
+          }
 
           const savedAdminIc = localStorage.getItem('sk_kepawa_admin_ic') || '730401125977';
           const foundAdmin = loaded.find(p => p.noKp === savedAdminIc) || loaded[2] || loaded[0];
@@ -172,6 +205,15 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('sk_kepawa_role_mode', roleMode);
   }, [roleMode]);
+
+  useEffect(() => {
+    if (toastNotification) {
+      const timer = setTimeout(() => {
+        setToastNotification(null);
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [toastNotification]);
 
   // Calculations
   const totalCount = participants.length;
@@ -361,13 +403,17 @@ export default function App() {
   // Quick toggle status
   const toggleStatus = async (id: string) => {
     if (roleMode === 'user') {
-      alert('Akses Terhad: Hanya Panel Admin (Mohd Zahari / Noradilah) sahaja dibenarkan menukar status secara manual.');
+      setToastNotification({
+        type: 'warning',
+        message: 'Akses Terhad: Hanya Panel Admin (Mohd Zahari / Noradilah) dibenarkan menukar status kehadiran.'
+      });
       return;
     }
     const nowTime = new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' });
     const target = participants.find(p => p.id === id);
-    const newStatus = target?.status === 'Hadir' ? 'Belum Hadir' : 'Hadir';
-    const newMasa = newStatus === 'Hadir' ? (target?.masaHadir || nowTime) : '';
+    if (!target) return;
+    const newStatus = target.status === 'Hadir' ? 'Belum Hadir' : 'Hadir';
+    const newMasa = newStatus === 'Hadir' ? (target.masaHadir || nowTime) : '';
 
     const updated = participants.map(p => {
       if (p.id === id) {
@@ -381,6 +427,11 @@ export default function App() {
     });
     setParticipants(updated);
     localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(updated));
+
+    setToastNotification({
+      type: 'info',
+      message: `Status ${target.namaPenuh} ditukar kepada "${newStatus}".`
+    });
 
     // Firestore live update
     try {
@@ -398,64 +449,106 @@ export default function App() {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.success) setParticipants(data.participants);
+        if (data.success && Array.isArray(data.participants)) {
+          setParticipants(data.participants.map((p: Participant) => ({ ...p, jawatan: cleanJawatan(p.jawatan) })));
+        }
       }
     } catch (e) {}
   };
 
-  const deleteParticipant = async (id: string) => {
-    if (roleMode === 'user') return;
-    if (confirm('Adakah anda pasti ingin memadam peserta ini?')) {
-      const updated = participants.filter(p => p.id !== id);
-      setParticipants(updated);
-      localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(updated));
-
-      // Firestore live delete
-      try {
-        deleteDoc(doc(db, 'participants', id));
-      } catch (e) {}
-
-      try {
-        const res = await fetch('/api/delete', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success) setParticipants(data.participants);
-        }
-      } catch (e) {}
+  // Open delete participant modal
+  const promptDeleteParticipant = (p: Participant) => {
+    if (roleMode === 'user') {
+      setToastNotification({
+        type: 'warning',
+        message: 'Akses Terhad: Hanya Panel Admin dibenarkan memadam peserta.'
+      });
+      return;
     }
+    setParticipantToDelete(p);
   };
 
-  const resetAllAttendance = async () => {
-    if (roleMode === 'user') return;
-    if (confirm('⚠️ PERHATIAN: Adakah anda pasti ingin menetapkan semula SEMUA status kehadiran kepada Belum Hadir?')) {
-      const resetList = participants.map(p => ({
+  const handleConfirmDelete = async () => {
+    if (!participantToDelete || roleMode === 'user') return;
+    const target = participantToDelete;
+    const updated = participants.filter(p => p.id !== target.id);
+    setParticipants(updated);
+    localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(updated));
+    setParticipantToDelete(null);
+
+    setToastNotification({
+      type: 'info',
+      message: `Peserta ${target.namaPenuh} telah dipadam.`
+    });
+
+    // Firestore live delete
+    try {
+      deleteDoc(doc(db, 'participants', target.id));
+    } catch (e) {}
+
+    try {
+      const res = await fetch('/api/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: target.id })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.participants)) {
+          setParticipants(data.participants.map((p: Participant) => ({ ...p, jawatan: cleanJawatan(p.jawatan) })));
+        }
+      }
+    } catch (e) {}
+  };
+
+  // Trigger reset confirmation modal
+  const handleOpenResetModal = () => {
+    if (roleMode === 'user') {
+      setToastNotification({
+        type: 'warning',
+        message: 'Akses Terhad: Hanya Panel Admin (Mohd Zahari / Noradilah) dibenarkan mengeset semula kehadiran.'
+      });
+      return;
+    }
+    setIsResetModalOpen(true);
+  };
+
+  // Execute full attendance reset with real-time Firestore sync & UI feedback
+  const handleExecuteReset = async () => {
+    if (roleMode === 'user') {
+      setIsResetModalOpen(false);
+      return;
+    }
+    setIsResetting(true);
+
+    try {
+      const resetList: Participant[] = participants.map(p => ({
         ...p,
         status: 'Belum Hadir' as const,
-        masaHadir: undefined
+        masaHadir: undefined,
+        nota: undefined
       }));
       setParticipants(resetList);
       localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(resetList));
       setLastScanned(null);
       setScanMessage(null);
 
-      // Firestore live batch reset
+      // Firestore live batch reset (using batch.set with merge: true for resiliency)
       try {
         const batch = writeBatch(db);
         participants.forEach(p => {
-          batch.update(doc(db, 'participants', p.id), {
+          const pRef = doc(db, 'participants', p.id);
+          batch.set(pRef, {
             status: 'Belum Hadir',
             masaHadir: ''
-          });
+          }, { merge: true });
         });
         await batch.commit();
       } catch (e) {
         console.warn("Firestore batch reset notice:", e);
       }
 
+      // Sync with Express backend if running
       try {
         const res = await fetch('/api/reset', {
           method: 'POST',
@@ -463,22 +556,39 @@ export default function App() {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.success) setParticipants(data.participants);
+          if (data.success && Array.isArray(data.participants)) {
+            setParticipants(data.participants.map((p: Participant) => ({ ...p, jawatan: cleanJawatan(p.jawatan) })));
+          }
         }
       } catch (e) {}
+
+      setToastNotification({
+        type: 'success',
+        message: 'Kehadiran berjaya diset semula! Semua staf kini berstatus "Belum Hadir".'
+      });
+    } catch (err) {
+      console.error(err);
+      setToastNotification({
+        type: 'error',
+        message: 'Ralat semasa menetapkan semula kehadiran. Sila cuba lagi.'
+      });
+    } finally {
+      setIsResetting(false);
+      setIsResetModalOpen(false);
     }
   };
 
   const handleAddParticipant = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAddFormError(null);
     if (roleMode === 'user') return;
     if (!newParticipant.namaPenuh || !newParticipant.noKp) {
-      alert('Sila lengkapkan Nama Penuh dan Nombor Kad Pengenalan.');
+      setAddFormError('Sila lengkapkan Nama Penuh dan Nombor Kad Pengenalan.');
       return;
     }
     const cleanIc = newParticipant.noKp.trim().replace(/\D/g, '');
     if (cleanIc.length < 8) {
-      alert('Sila masukkan Nombor Kad Pengenalan yang sah.');
+      setAddFormError('Sila masukkan Nombor Kad Pengenalan yang sah (sekurang-kurangnya 8-12 digit).');
       return;
     }
 
@@ -487,15 +597,19 @@ export default function App() {
       namaPenuh: newParticipant.namaPenuh.trim().toUpperCase(),
       noKp: cleanIc,
       email: `${cleanIc}@moe-dl.edu.my`,
-      jawatan: newParticipant.jawatan,
+      jawatan: cleanJawatan(newParticipant.jawatan || 'Guru Akademik'),
       status: 'Belum Hadir'
     };
 
     const updated = [...participants, created];
     setParticipants(updated);
     localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(updated));
-    setNewParticipant({ namaPenuh: '', noKp: '', jawatan: 'Guru Akademik (DG5)' });
+    setNewParticipant({ namaPenuh: '', noKp: '', jawatan: 'Guru Akademik' });
     setIsAddModalOpen(false);
+    setToastNotification({
+      type: 'success',
+      message: `Peserta baharu (${created.namaPenuh}) berjaya didaftarkan.`
+    });
 
     // Firestore live add
     try {
@@ -774,14 +888,18 @@ export default function App() {
                       <ArrowRight className="w-4 h-4 text-slate-500" />
                     </button>
                     <button 
-                      onClick={resetAllAttendance}
-                      className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-red-950/30 text-red-300 border border-slate-800 hover:border-red-900/50 text-sm font-medium transition-all cursor-pointer"
+                      type="button"
+                      onClick={handleOpenResetModal}
+                      className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-red-950/40 text-red-300 border border-slate-800 hover:border-red-800/60 text-sm font-semibold transition-all cursor-pointer group shadow-sm active:scale-[0.98]"
+                      title="Set semula status semua staf kepada Belum Hadir"
                     >
                       <span className="flex items-center gap-2">
-                        <RefreshCw className="w-4 h-4 text-red-400" />
+                        <RefreshCw className="w-4 h-4 text-red-400 group-hover:rotate-180 transition-transform duration-500" />
                         Set Semula Kehadiran
                       </span>
-                      <ArrowRight className="w-4 h-4 text-slate-500" />
+                      <span className="text-[11px] bg-red-500/10 text-red-400 border border-red-500/20 px-2 py-0.5 rounded-md font-medium">
+                        Admin
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -1073,8 +1191,18 @@ export default function App() {
                 <h2 className="text-xl font-bold text-white">Senarai Staf HRMIS SK Kepawa</h2>
                 <p className="text-slate-400 text-sm mt-1">Urus kehadiran peserta berdasarkan Nombor Kad Pengenalan rasmi.</p>
               </div>
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
                 <button
+                  type="button"
+                  onClick={handleOpenResetModal}
+                  className="w-full sm:w-auto bg-slate-900 hover:bg-red-950/40 text-red-300 border border-slate-700 hover:border-red-800/60 px-4 py-2.5 rounded-xl font-medium text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-[0.98]"
+                  title="Set semula semua status kehadiran kepada Belum Hadir"
+                >
+                  <RefreshCw className="w-4 h-4 text-red-400" />
+                  <span>Set Semula Semua</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setIsAddModalOpen(true)}
                   className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-all shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer"
                 >
@@ -1174,7 +1302,7 @@ export default function App() {
                                 <CreditCard className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => deleteParticipant(p.id)}
+                                onClick={() => promptDeleteParticipant(p)}
                                 title="Padam Peserta"
                                 className="p-1.5 rounded-lg bg-slate-950 text-red-400 hover:text-red-300 border border-red-900/40 hover:border-red-700 transition-all cursor-pointer"
                               >
@@ -1379,6 +1507,13 @@ export default function App() {
             <h3 className="text-xl font-bold text-white mb-2">Tambah Peserta Baru</h3>
             <p className="text-slate-400 text-xs mb-6">Masukkan maklumat staf atau guru untuk Bengkel SK Kepawa 2026.</p>
 
+            {addFormError && (
+              <div className="mb-4 p-3 rounded-xl bg-red-950/60 border border-red-800 text-red-200 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{addFormError}</span>
+              </div>
+            )}
+
             <form onSubmit={handleAddParticipant} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Nama Penuh (Huruf Besar)</label>
@@ -1410,7 +1545,7 @@ export default function App() {
                   type="text"
                   value={newParticipant.jawatan}
                   onChange={(e) => setNewParticipant({ ...newParticipant, jawatan: e.target.value })}
-                  placeholder="Cth: Guru Akademik (DG5)"
+                  placeholder="Cth: Guru Akademik"
                   className="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl py-2.5 px-3.5 text-white text-sm focus:outline-none"
                   required
                 />
@@ -1481,6 +1616,142 @@ export default function App() {
                 Tutup Slip
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== RESET ALL ATTENDANCE MODAL ==================== */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-slate-950 border border-red-900/60 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center">
+            
+            <div className="w-16 h-16 bg-red-500/10 text-red-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-500/30 shadow-lg shadow-red-950/40">
+              <AlertTriangle className="w-8 h-8 text-red-400 animate-pulse" />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-300 text-xs font-semibold mb-2">
+              <span>Tindakan Pentadbir (Admin)</span>
+            </div>
+
+            <h3 className="text-xl font-bold text-white mt-1">Set Semula Semua Kehadiran?</h3>
+            <p className="text-slate-300 text-xs sm:text-sm mt-2 leading-relaxed">
+              Adakah anda pasti ingin menetapkan semula semua rekod kehadiran staf kembali kepada status <span className="text-amber-400 font-semibold">"Belum Hadir"</span>?
+            </p>
+
+            <div className="my-5 p-4 rounded-2xl bg-slate-900 border border-slate-800 text-left space-y-2 text-xs">
+              <div className="flex justify-between items-center text-slate-300">
+                <span>Staf Hadir Semasa:</span>
+                <span className="font-bold text-emerald-400 font-mono">{hadirCount} Orang</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-300">
+                <span>Status Selepas Set Semula:</span>
+                <span className="font-bold text-amber-400 font-mono">0 Hadir / {totalCount} Belum Hadir</span>
+              </div>
+              <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 leading-normal">
+                ⚠️ Rekod masa imbasan akan dipadam dan diselaraskan secara langsung ke Firebase Cloud Firestore serta peranti lain.
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={() => setIsResetModalOpen(false)}
+                disabled={isResetting}
+                className="flex-1 py-2.5 px-4 rounded-xl text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 text-sm font-medium transition-all cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteReset}
+                disabled={isResetting}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isResetting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Mengeset Semula...</span>
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Ya, Set Semula</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ==================== DELETE PARTICIPANT CONFIRMATION MODAL ==================== */}
+      {participantToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-slate-950 border border-red-900/50 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center">
+            
+            <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-500/20">
+              <Trash2 className="w-7 h-7 text-red-400" />
+            </div>
+
+            <h3 className="text-xl font-bold text-white">Padam Peserta?</h3>
+            <p className="text-slate-300 text-xs sm:text-sm mt-2 leading-relaxed">
+              Adakah anda pasti ingin memadam staf/peserta ini daripada senarai bengkel?
+            </p>
+
+            <div className="my-4 p-4 rounded-2xl bg-slate-900 border border-slate-800 text-left text-xs space-y-1">
+              <p className="font-bold text-white text-sm">{participantToDelete.namaPenuh}</p>
+              <p className="font-mono text-emerald-400 text-xs">No. KP: {participantToDelete.noKp}</p>
+              <p className="text-slate-400">{participantToDelete.jawatan}</p>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={() => setParticipantToDelete(null)}
+                className="flex-1 py-2.5 px-4 rounded-xl text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 text-sm font-medium transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Ya, Padam</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Floating Toast Notification */}
+      {toastNotification && (
+        <div className="fixed top-5 right-5 z-50 max-w-sm sm:max-w-md animate-fadeIn shadow-2xl">
+          <div className={`p-4 rounded-2xl border flex items-start gap-3 backdrop-blur-md ${
+            toastNotification.type === 'success' 
+              ? 'bg-emerald-950/95 border-emerald-500/60 text-emerald-100 shadow-emerald-950/60' 
+              : toastNotification.type === 'warning'
+              ? 'bg-amber-950/95 border-amber-500/60 text-amber-100 shadow-amber-950/60'
+              : toastNotification.type === 'error'
+              ? 'bg-red-950/95 border-red-500/60 text-red-100 shadow-red-950/60'
+              : 'bg-blue-950/95 border-blue-500/60 text-blue-100 shadow-blue-950/60'
+          }`}>
+            {toastNotification.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />}
+            {toastNotification.type === 'warning' && <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
+            {toastNotification.type === 'error' && <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />}
+            {toastNotification.type === 'info' && <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />}
+            <div className="flex-1">
+              <p className="text-xs sm:text-sm font-semibold">{toastNotification.message}</p>
+            </div>
+            <button 
+              onClick={() => setToastNotification(null)}
+              className="text-slate-400 hover:text-white p-0.5 rounded cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
