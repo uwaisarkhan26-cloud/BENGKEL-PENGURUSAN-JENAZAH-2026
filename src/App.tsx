@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Edit, ShieldCheck, FileText, BarChart3, Calendar, 
   MapPin, UserCheck, RefreshCw, Check, AlertCircle, QrCode, Sparkles,
   ArrowRight, ShieldAlert, CheckSquare, Layers, HelpCircle, CreditCard, Lock, Unlock, UserCog, Radio, Activity,
-  AlertTriangle, X
+  AlertTriangle, X, LogOut, KeyRound, Eye, EyeOff
 } from 'lucide-react';
 import { db } from './firebase';
 import { 
@@ -92,6 +92,10 @@ export default function App() {
   });
 
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [selectedAdminCandidateIc, setSelectedAdminCandidateIc] = useState('730401125977');
+  const [adminPinInput, setAdminPinInput] = useState('');
+  const [adminAuthError, setAdminAuthError] = useState<string | null>(null);
+  const [showAdminPin, setShowAdminPin] = useState(false);
   
   // Scanner state (IC number based)
   const [scanInput, setScanInput] = useState('');
@@ -214,6 +218,68 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [toastNotification]);
+
+  // Strict RBAC: Non-admin users are strictly restricted to the attendance check-in tab
+  useEffect(() => {
+    if (roleMode === 'user' && activeTab !== 'scanner') {
+      setActiveTab('scanner');
+    }
+  }, [roleMode, activeTab]);
+
+  // Admin authentication handler
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAdminAuthError(null);
+
+    const pin = adminPinInput.trim();
+    if (!pin) {
+      setAdminAuthError('Sila masukkan PIN atau kata laluan keselamatan admin.');
+      return;
+    }
+
+    const last4 = selectedAdminCandidateIc.slice(-4);
+    // Allowed PINs: '2026', 'admin2026', 'skkepawa', '1234', last 4 digits of admin IC, or full 12 digits
+    const isValid = 
+      pin === '2026' || 
+      pin.toLowerCase() === 'admin2026' || 
+      pin.toLowerCase() === 'skkepawa' || 
+      pin === '1234' ||
+      pin === last4 || 
+      pin === selectedAdminCandidateIc;
+
+    if (!isValid) {
+      setAdminAuthError('Kata Laluan / PIN tidak tepat. Hanya Pentadbir SK Kepawa yang sah dibenarkan.');
+      return;
+    }
+
+    const matchedAdmin = participants.find(p => p.noKp === selectedAdminCandidateIc) || 
+      (selectedAdminCandidateIc === '730401125977' ? participants[2] : participants[9]) || 
+      participants[0];
+
+    setCurrentAdmin(matchedAdmin);
+    setRoleMode('admin');
+    setActiveTab('dashboard');
+    localStorage.setItem('sk_kepawa_role_mode', 'admin');
+    localStorage.setItem('sk_kepawa_admin_ic', matchedAdmin.noKp);
+    setAdminPinInput('');
+    setAdminAuthError(null);
+    setIsAdminModalOpen(false);
+    setToastNotification({
+      type: 'success',
+      message: `Akses Diberikan: Selamat datang ke Panel Admin, ${matchedAdmin.namaPenuh}!`
+    });
+  };
+
+  const handleAdminLogout = () => {
+    setRoleMode('user');
+    setActiveTab('scanner');
+    localStorage.setItem('sk_kepawa_role_mode', 'user');
+    setIsAdminModalOpen(false);
+    setToastNotification({
+      type: 'info',
+      message: 'Anda telah log keluar daripada Panel Admin. Kini dalam Mod Isi Kehadiran.'
+    });
+  };
 
   // Calculations
   const totalCount = participants.length;
@@ -676,26 +742,26 @@ export default function App() {
           <div className="flex items-center space-x-2 sm:space-x-3">
             {roleMode === 'admin' ? (
               <>
-                {/* Admin role switch buttons */}
-                <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1">
+                {/* Admin role active controls: Switch Admin, Log Keluar */}
+                <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 gap-1">
                   <button
-                    onClick={() => setIsAdminModalOpen(true)}
-                    className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-600 text-white shadow-md cursor-pointer"
-                    title="Pilih Akaun Admin"
+                    onClick={() => {
+                      setAdminAuthError(null);
+                      setIsAdminModalOpen(true);
+                    }}
+                    className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md cursor-pointer"
+                    title="Pengurusan Pentadbir Bertugas"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Panel Admin</span>
                   </button>
                   <button
-                    onClick={() => {
-                      setRoleMode('user');
-                      setActiveTab('scanner');
-                    }}
-                    className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-400 hover:text-white cursor-pointer"
-                    title="Tukar ke Mod Isi Kehadiran Sahaja"
+                    onClick={handleAdminLogout}
+                    className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 text-slate-300 hover:text-red-300 hover:bg-red-950/40 cursor-pointer"
+                    title="Log Keluar daripada Panel Admin"
                   >
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>Mod Isi Kehadiran</span>
+                    <LogOut className="w-3.5 h-3.5 text-red-400" />
+                    <span>Log Keluar</span>
                   </button>
                 </div>
 
@@ -709,11 +775,16 @@ export default function App() {
               </>
             ) : (
               <button
-                onClick={() => setIsAdminModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 hover:border-emerald-500/60 hover:text-white transition-all cursor-pointer shadow-sm"
+                onClick={() => {
+                  setAdminPinInput('');
+                  setAdminAuthError(null);
+                  setIsAdminModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-amber-300 hover:text-amber-200 border border-amber-600/40 hover:border-amber-500 transition-all cursor-pointer shadow-md shadow-amber-950/20 group"
+                title="Akses khas untuk Pentadbir sahaja"
               >
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Panel Admin</span>
+                <Lock className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+                <span>Panel Admin (Khas Admin)</span>
               </button>
             )}
           </div>
@@ -1431,71 +1502,209 @@ export default function App() {
 
       </main>
 
-      {/* ==================== ADMIN SWITCHER MODAL ==================== */}
+      {/* ==================== ADMIN AUTH & SWITCHER MODAL ==================== */}
       {isAdminModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center">
-            <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald-400 border border-emerald-500/30">
-              <UserCog className="w-8 h-8" />
-            </div>
-            <h3 className="text-xl font-bold text-white mb-2">Akses Panel Admin Dashboard</h3>
-            <p className="text-slate-400 text-xs mb-6">Sila pilih akaun pentadbir rasmi SK Kepawa untuk membuka panel admin dan Live Monitoring.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
+            <button
+              onClick={() => {
+                setAdminPinInput('');
+                setAdminAuthError(null);
+                setIsAdminModalOpen(false);
+              }}
+              className="absolute right-5 top-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-all cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
 
-            <div className="space-y-3">
-              {[
-                { name: 'MOHD ZAHARI BIN TIBIN', ic: '730401125977', role: 'Guru Besar (Admin Utama)' },
-                { name: 'NORADILAH BINTI RIBUT', ic: '810929125238', role: 'Guru Pendidikan Islam / Penyelaras (Admin)' }
-              ].map((adm) => {
-                const isSelected = currentAdmin.noKp === adm.ic;
-                const participantObj = participants.find(p => p.noKp === adm.ic) || participants[0];
-                return (
+            <div className="text-center mb-6">
+              <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3 text-emerald-400 shadow-lg shadow-emerald-500/10">
+                {roleMode === 'admin' ? <ShieldCheck className="w-7 h-7 text-emerald-400" /> : <Lock className="w-7 h-7 text-amber-400" />}
+              </div>
+              <h3 className="text-xl font-bold text-white">
+                {roleMode === 'admin' ? 'Pengurusan Pentadbir Bengkel' : 'Pengesahan Panel Admin'}
+              </h3>
+              <p className="text-slate-400 text-xs mt-1">
+                {roleMode === 'admin' 
+                  ? 'Akses Pentadbir Aktif (Mohd Zahari / Noradilah).' 
+                  : 'Akses terhad: Sila masukkan PIN pentadbir yang sah untuk membuka panel admin.'}
+              </p>
+            </div>
+
+            {roleMode === 'admin' ? (
+              /* Already authenticated Admin view */
+              <div className="space-y-4">
+                <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-700/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Pentadbir Aktif Semasa</span>
+                      <p className="font-bold text-white text-sm mt-0.5">{currentAdmin.namaPenuh}</p>
+                      <p className="text-xs text-slate-300">{currentAdmin.jawatan}</p>
+                      <p className="text-xs font-mono text-emerald-400 mt-1">No. KP: {currentAdmin.noKp}</p>
+                    </div>
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5 text-emerald-400" /> Aktif
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-2">Tukar Pentadbir Bertugas:</label>
+                  <div className="space-y-2">
+                    {[
+                      { name: 'MOHD ZAHARI BIN TIBIN', ic: '730401125977', role: 'Guru Besar (Admin Utama)' },
+                      { name: 'NORADILAH BINTI RIBUT', ic: '810929125238', role: 'Guru Pendidikan Islam / Penyelaras (Admin)' }
+                    ].map((adm) => {
+                      const isCurrent = currentAdmin.noKp === adm.ic;
+                      return (
+                        <button
+                          key={adm.ic}
+                          disabled={isCurrent}
+                          onClick={() => {
+                            const pObj = participants.find(p => p.noKp === adm.ic) || participants[0];
+                            setCurrentAdmin(pObj);
+                            localStorage.setItem('sk_kepawa_admin_ic', adm.ic);
+                            setToastNotification({
+                              type: 'info',
+                              message: `Pentadbir bertugas ditukar kepada: ${adm.name}`
+                            });
+                          }}
+                          className={`w-full p-3 rounded-xl border text-left text-xs transition-all flex items-center justify-between ${
+                            isCurrent
+                              ? 'bg-slate-900 border-emerald-500/60 text-white cursor-default'
+                              : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800 hover:border-slate-700 text-slate-300 cursor-pointer'
+                          }`}
+                        >
+                          <div>
+                            <p className="font-bold text-white">{adm.name}</p>
+                            <p className="text-slate-400 text-[11px] mt-0.5">{adm.role}</p>
+                            <p className="text-slate-500 text-[10px] font-mono mt-0.5">No. KP: {adm.ic}</p>
+                          </div>
+                          {isCurrent && <Check className="w-4 h-4 text-emerald-400" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3">
                   <button
-                    key={adm.ic}
+                    onClick={handleAdminLogout}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-800/60 text-red-300 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Log Keluar Admin</span>
+                  </button>
+                  <button
+                    onClick={() => setIsAdminModalOpen(false)}
+                    className="py-2.5 px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium border border-slate-700 transition-all cursor-pointer"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* User Mode: Requires admin candidate selection and security PIN */
+              <form onSubmit={handleAdminLogin} className="space-y-4 text-left">
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-2">Pilih Akaun Pentadbir:</label>
+                  <div className="space-y-2">
+                    {[
+                      { name: 'MOHD ZAHARI BIN TIBIN', ic: '730401125977', role: 'Guru Besar (Admin Utama)' },
+                      { name: 'NORADILAH BINTI RIBUT', ic: '810929125238', role: 'Guru Pendidikan Islam / Penyelaras (Admin)' }
+                    ].map((adm) => {
+                      const isSelected = selectedAdminCandidateIc === adm.ic;
+                      return (
+                        <div
+                          key={adm.ic}
+                          onClick={() => {
+                            setSelectedAdminCandidateIc(adm.ic);
+                            setAdminAuthError(null);
+                          }}
+                          className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all flex items-center justify-between ${
+                            isSelected
+                              ? 'bg-emerald-950/50 border-emerald-500 shadow-md shadow-emerald-500/10'
+                              : 'bg-slate-900 border-slate-800 hover:bg-slate-800/80 text-slate-300'
+                          }`}
+                        >
+                          <div>
+                            <p className="font-bold text-white text-xs sm:text-sm">{adm.name}</p>
+                            <p className="text-[11px] text-emerald-400 mt-0.5">{adm.role}</p>
+                            <p className="text-[10px] font-mono text-slate-400 mt-0.5">No. KP: {adm.ic}</p>
+                          </div>
+                          <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
+                            isSelected ? 'border-emerald-500 bg-emerald-500 text-slate-950' : 'border-slate-600'
+                          }`}>
+                            {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-1.5 flex items-center justify-between">
+                    <span>PIN Keselamatan Pentadbir</span>
+                    <span className="text-[10px] text-amber-400 font-normal">Khas Admin</span>
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type={showAdminPin ? 'text' : 'password'}
+                      value={adminPinInput}
+                      onChange={(e) => {
+                        setAdminPinInput(e.target.value);
+                        setAdminAuthError(null);
+                      }}
+                      placeholder="Masukkan PIN (cth: 2026 atau 4 digit akhir No. KP)..."
+                      className="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl py-2.5 pl-10 pr-10 text-white text-sm focus:outline-none font-mono"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPin(!showAdminPin)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                      title={showAdminPin ? "Sembunyikan PIN" : "Tunjukkan PIN"}
+                    >
+                      {showAdminPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Petunjuk PIN: <strong className="text-emerald-400 font-mono">2026</strong> atau 4 digit akhir No. KP ({selectedAdminCandidateIc.slice(-4)})</span>
+                  </div>
+                </div>
+
+                {adminAuthError && (
+                  <div className="p-3 rounded-xl bg-red-950/60 border border-red-800 text-red-200 text-xs flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                    <span>{adminAuthError}</span>
+                  </div>
+                )}
+
+                <div className="pt-3 border-t border-slate-800 flex items-center justify-end space-x-3">
+                  <button
+                    type="button"
                     onClick={() => {
-                      setCurrentAdmin(participantObj);
-                      setRoleMode('admin');
-                      setActiveTab('dashboard');
+                      setAdminPinInput('');
+                      setAdminAuthError(null);
                       setIsAdminModalOpen(false);
                     }}
-                    className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                      isSelected && roleMode === 'admin'
-                        ? 'bg-emerald-600/20 border-emerald-500 text-white shadow-lg shadow-emerald-500/20' 
-                        : 'bg-slate-900 border-slate-800 hover:bg-slate-800 text-slate-300'
-                    }`}
+                    className="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 text-xs font-medium transition-all cursor-pointer"
                   >
-                    <div>
-                      <p className="font-bold text-sm">{adm.name}</p>
-                      <p className="text-xs text-emerald-400 mt-0.5">{adm.role}</p>
-                      <p className="text-[11px] font-mono text-slate-500 mt-1">No. KP: {adm.ic}</p>
-                    </div>
-                    {isSelected && roleMode === 'admin' && (
-                      <span className="bg-emerald-500 text-slate-950 font-bold text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
-                        <Check className="w-3.5 h-3.5" /> Aktif
-                      </span>
-                    )}
+                    Batal
                   </button>
-                );
-              })}
-            </div>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Buka Panel Admin</span>
+                  </button>
+                </div>
+              </form>
+            )}
 
-            <div className="mt-6 pt-4 border-t border-slate-800 flex items-center justify-between">
-              <button
-                onClick={() => {
-                  setRoleMode('user');
-                  setActiveTab('scanner');
-                  setIsAdminModalOpen(false);
-                }}
-                className="text-xs text-blue-400 hover:text-blue-300 underline font-medium cursor-pointer"
-              >
-                Tukar ke Mod Pengguna (Isi Kehadiran Sahaja)
-              </button>
-              <button
-                onClick={() => setIsAdminModalOpen(false)}
-                className="bg-slate-800 hover:bg-slate-700 text-white font-medium px-4 py-2 rounded-xl text-xs transition-all border border-slate-700 cursor-pointer"
-              >
-                Tutup
-              </button>
-            </div>
           </div>
         </div>
       )}
