@@ -237,18 +237,11 @@ export default function App() {
       return;
     }
 
-    const last4 = selectedAdminCandidateIc.slice(-4);
-    // Allowed PINs: '2026', 'admin2026', 'skkepawa', '1234', last 4 digits of admin IC, or full 12 digits
-    const isValid = 
-      pin === '2026' || 
-      pin.toLowerCase() === 'admin2026' || 
-      pin.toLowerCase() === 'skkepawa' || 
-      pin === '1234' ||
-      pin === last4 || 
-      pin === selectedAdminCandidateIc;
+    // Allowed PIN: strictly XBA6019 (Kod Sekolah SK Kepawa)
+    const isValid = pin.toUpperCase() === 'XBA6019';
 
     if (!isValid) {
-      setAdminAuthError('Kata Laluan / PIN tidak tepat. Hanya Pentadbir SK Kepawa yang sah dibenarkan.');
+      setAdminAuthError('PIN Keselamatan tidak sah. Sila masukkan Kod PIN Pentadbir SK Kepawa yang betul.');
       return;
     }
 
@@ -1657,7 +1650,7 @@ export default function App() {
                         setAdminPinInput(e.target.value);
                         setAdminAuthError(null);
                       }}
-                      placeholder="Masukkan PIN (cth: 2026 atau 4 digit akhir No. KP)..."
+                      placeholder="Masukkan PIN Keselamatan Pentadbir..."
                       className="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl py-2.5 pl-10 pr-10 text-white text-sm focus:outline-none font-mono"
                       autoFocus
                     />
@@ -1669,9 +1662,6 @@ export default function App() {
                     >
                       {showAdminPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
-                  </div>
-                  <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-400">
-                    <span>Petunjuk PIN: <strong className="text-emerald-400 font-mono">2026</strong> atau 4 digit akhir No. KP ({selectedAdminCandidateIc.slice(-4)})</span>
                   </div>
                 </div>
 
