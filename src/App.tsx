@@ -5,6 +5,10 @@ import {
   MapPin, UserCheck, RefreshCw, Check, AlertCircle, QrCode, Sparkles,
   ArrowRight, ShieldAlert, CheckSquare, Layers, HelpCircle, CreditCard, Lock, Unlock, UserCog, Radio, Activity
 } from 'lucide-react';
+import { db } from './firebase';
+import { 
+  collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, writeBatch 
+} from 'firebase/firestore';
 
 export interface Participant {
   id: string;
@@ -17,8 +21,36 @@ export interface Participant {
   nota?: string;
 }
 
+export const DEFAULT_PARTICIPANTS: Participant[] = [
+  { id: '1', namaPenuh: 'ALIZAH BINTI ABD SUILI', noKp: '800808125208', email: 'g-08232901@moe-dl.edu.my', jawatan: 'Guru Prasekolah (DG9)', status: 'Belum Hadir' },
+  { id: '2', namaPenuh: 'ASNAH BINTI MD DANIL', noKp: '790929125478', email: 'g-78232902@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
+  { id: '3', namaPenuh: 'MOHD ZAHARI BIN TIBIN', noKp: '730401125977', email: 'g-77263791@moe-dl.edu.my', jawatan: 'Guru Besar (DG6)', status: 'Belum Hadir' },
+  { id: '4', namaPenuh: 'NURTITAH BINTI MEMBUAI', noKp: '680807125966', email: 'g-6632911@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
+  { id: '5', namaPenuh: 'FAIRUZ @ SITI FAIRUZ BINTI ABD RAHMAN', noKp: '741008125106', email: 'g-06232904@moe-dl.edu.my', jawatan: 'Guru Penolong Kanan HEM (DG5)', status: 'Belum Hadir' },
+  { id: '6', namaPenuh: 'DAYANG SABARIAH @ MILAH BINTI JOAS', noKp: '720817125330', email: 'g-30232903@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
+  { id: '7', namaPenuh: 'ROHIDAH @ NORIDAH BINTI MASLIN', noKp: '720708125366', email: 'g-6632912@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
+  { id: '8', namaPenuh: 'SARIPAH BINTI OMAR', noKp: '721113125046', email: 'g-46233078@moe-dl.edu.my', jawatan: 'Guru Pemulihan (DG5)', status: 'Belum Hadir' },
+  { id: '9', namaPenuh: 'SITI HABIBAH BINTI TAIP', noKp: '820303125286', email: 'g-86233208@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
+  { id: '10', namaPenuh: 'NORADILAH BINTI RIBUT', noKp: '810929125238', email: 'g-38232909@moe-dl.edu.my', jawatan: 'Guru Pendidikan Islam (DG9)', status: 'Belum Hadir' },
+  { id: '11', namaPenuh: 'NORMAWATI BINTI ISMAIL', noKp: '840406035740', email: 'g-40232910@moe-dl.edu.my', jawatan: 'Guru Pendidikan Islam (DG9)', status: 'Belum Hadir' },
+  { id: '12', namaPenuh: 'SITI HAFIZAH BINTI DURAMAN', noKp: '820611125624', email: 'g-82061112@moe-dl.edu.my', jawatan: 'Pembantu Pengurusan Murid (N1)', status: 'Belum Hadir' },
+  { id: '13', namaPenuh: 'KHAYSAR BIN MOHAMAD NOOR', noKp: '821124126181', email: 'g-81232906@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
+  { id: '14', namaPenuh: 'MD HAFIZUDDIN BIN MADINI', noKp: '940317126657', email: 'g-94031712@moe-dl.edu.my', jawatan: 'Pembantu Khidmat Am (H1)', status: 'Belum Hadir' },
+  { id: '15', namaPenuh: 'MIMI NUR SHAHERA BINTI HAMINUS', noKp: '970620016220', email: 'g-20510582@moe-dl.edu.my', jawatan: 'Guru Perpustakaan dan Media (DG9)', status: 'Belum Hadir' },
+  { id: '16', namaPenuh: 'NOORLIANA ERDENAA BINTI MUSNIN', noKp: '970611125994', email: 'g-94575251@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
+];
+
 export default function App() {
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [participants, setParticipants] = useState<Participant[]>(() => {
+    try {
+      const saved = localStorage.getItem('sk_kepawa_attendance_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_PARTICIPANTS;
+  });
 
   // Role state: 'admin' (Mohd Zahari or Noradilah) vs 'user' (Guru / Staf - Isi Kehadiran Sahaja)
   const [roleMode, setRoleMode] = useState<'admin' | 'user'>(() => {
@@ -35,10 +67,18 @@ export default function App() {
   // Admin state: Admins are Mohd Zahari Bin Tibin & Noradilah Binti Ribut
   const [currentAdmin, setCurrentAdmin] = useState<Participant>(() => {
     const saved = localStorage.getItem('sk_kepawa_admin_ic');
-    if (saved) {
-      // we'll find once participants load
-    }
-    return { id: '3', namaPenuh: 'MOHD ZAHARI BIN TIBIN', noKp: '730401125977', email: 'g-77263791@moe-dl.edu.my', jawatan: 'Guru Besar (DG6)', status: 'Belum Hadir' };
+    const initialList = (() => {
+      try {
+        const s = localStorage.getItem('sk_kepawa_attendance_data');
+        if (s) {
+          const parsed = JSON.parse(s);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+      return DEFAULT_PARTICIPANTS;
+    })();
+    const targetIc = saved || '730401125977';
+    return initialList.find((p: Participant) => p.noKp === targetIc) || initialList[2] || initialList[0];
   });
 
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
@@ -59,27 +99,70 @@ export default function App() {
 
   const [selectedParticipantForCard, setSelectedParticipantForCard] = useState<Participant | null>(null);
 
-  // Fetch participants from server API (Live Cloud Sync)
+  // Fetch participants from server API (Live Cloud Sync with local fallback)
   const fetchParticipants = async () => {
     try {
       const res = await fetch('/api/participants');
       if (res.ok) {
         const data = await res.json();
-        setParticipants(data);
-        const savedAdminIc = localStorage.getItem('sk_kepawa_admin_ic') || '730401125977';
-        const foundAdmin = data.find((p: Participant) => p.noKp === savedAdminIc) || data[2] || data[0];
-        if (foundAdmin) setCurrentAdmin(foundAdmin);
+        if (Array.isArray(data) && data.length > 0) {
+          setParticipants(data);
+          localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(data));
+          const savedAdminIc = localStorage.getItem('sk_kepawa_admin_ic') || '730401125977';
+          const foundAdmin = data.find((p: Participant) => p.noKp === savedAdminIc) || data[2] || data[0];
+          if (foundAdmin) setCurrentAdmin(foundAdmin);
+        }
       }
     } catch (e) {
-      console.error(e);
+      // Running on static hosting like Netlify (keep local data)
     }
   };
 
   useEffect(() => {
+    // 1. Local / Express server initial fetch
     fetchParticipants();
-    // Poll every 3 seconds for live multi-user real-time sync across devices
-    const interval = setInterval(fetchParticipants, 3000);
-    return () => clearInterval(interval);
+
+    // 2. Real-time multi-device cloud synchronization via Firebase Firestore
+    let unsubscribe = () => {};
+    try {
+      const colRef = collection(db, 'participants');
+      unsubscribe = onSnapshot(colRef, async (snapshot) => {
+        if (snapshot.empty) {
+          // Seed the 16 HRMIS SK Kepawa participants if Firestore collection is fresh
+          try {
+            const batch = writeBatch(db);
+            DEFAULT_PARTICIPANTS.forEach(p => {
+              const ref = doc(db, 'participants', p.id);
+              batch.set(ref, p);
+            });
+            await batch.commit();
+          } catch (e) {
+            console.warn("Notice: Firestore seeding:", e);
+          }
+        } else {
+          const loaded: Participant[] = [];
+          snapshot.forEach(docSnap => {
+            loaded.push(docSnap.data() as Participant);
+          });
+          // Sort by ID 1..16
+          loaded.sort((a, b) => Number(a.id) - Number(b.id));
+          setParticipants(loaded);
+          localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(loaded));
+
+          const savedAdminIc = localStorage.getItem('sk_kepawa_admin_ic') || '730401125977';
+          const foundAdmin = loaded.find(p => p.noKp === savedAdminIc) || loaded[2] || loaded[0];
+          if (foundAdmin) setCurrentAdmin(foundAdmin);
+        }
+      }, (err) => {
+        console.warn("Firestore live sync notice:", err);
+      });
+    } catch (e) {
+      console.warn("Firestore initialization notice:", e);
+    }
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -178,11 +261,64 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  // Handle Scanner submission (by No. KP via API)
+  // Handle Scanner / Isi Kehadiran submission (supports both live API and Netlify static hosting)
   const handleScanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const query = scanInput.trim();
     if (!query) return;
+
+    const processLocalScan = (icQuery: string) => {
+      const cleanInput = icQuery.trim().replace(/\D/g, '');
+      const found = participants.find(p => {
+        const pClean = p.noKp.replace(/\D/g, '');
+        return pClean === cleanInput || (cleanInput.length >= 6 && pClean.includes(cleanInput));
+      }) || participants.find(p => p.namaPenuh.toLowerCase().includes(icQuery.toLowerCase().trim()));
+
+      if (!found) {
+        setScanMessage({
+          type: 'error',
+          text: `Tiada rekod staf ditemui untuk No. KP: "${icQuery}". Sila semak semula nombor kad pengenalan anda.`
+        });
+        setLastScanned(null);
+        return;
+      }
+
+      const nowTime = new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' });
+
+      if (found.status === 'Hadir') {
+        setLastScanned(found);
+        setScanMessage({
+          type: 'warning',
+          text: `Perhatian: ${found.namaPenuh} telah pun direkodkan HADIR pada ${found.masaHadir || nowTime}.`
+        });
+        return;
+      }
+
+      const updatedParticipant: Participant = {
+        ...found,
+        status: 'Hadir',
+        masaHadir: nowTime
+      };
+
+      const updatedList = participants.map(p => p.id === found.id ? updatedParticipant : p);
+      setParticipants(updatedList);
+      localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(updatedList));
+      setLastScanned(updatedParticipant);
+      setScanMessage({
+        type: 'success',
+        text: `Tahniah! Kehadiran disahkan untuk ${found.namaPenuh} (${found.jawatan}) pada jam ${nowTime}.`
+      });
+
+      // Sync to Firebase Firestore (Real-time live multi-device sync for Netlify & all devices)
+      try {
+        updateDoc(doc(db, 'participants', found.id), {
+          status: 'Hadir',
+          masaHadir: nowTime
+        });
+      } catch (e) {
+        console.warn("Firestore sync write error:", e);
+      }
+    };
 
     try {
       const res = await fetch('/api/scan', {
@@ -190,57 +326,105 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ noKp: query })
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setLastScanned(data.participant);
-        if (data.alreadyCheckedIn) {
-          setScanMessage({ type: 'warning', text: data.message });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setLastScanned(data.participant);
+          if (data.alreadyCheckedIn) {
+            setScanMessage({ type: 'warning', text: data.message });
+          } else {
+            setScanMessage({ type: 'success', text: data.message });
+            fetchParticipants();
+            try {
+              updateDoc(doc(db, 'participants', data.participant.id), {
+                status: 'Hadir',
+                masaHadir: data.participant.masaHadir || new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' })
+              });
+            } catch (e) {}
+          }
+          setScanInput('');
+          return;
         } else {
-          setScanMessage({ type: 'success', text: data.message });
-          fetchParticipants(); // Refresh live data instantly
+          setScanMessage({ type: 'error', text: data.message || 'Ralat imbasan.' });
+          setLastScanned(null);
+          setScanInput('');
+          return;
         }
-      } else {
-        setScanMessage({ type: 'error', text: data.message || 'Ralat imbasan.' });
-        setLastScanned(null);
       }
+      processLocalScan(query);
     } catch (err) {
-      setScanMessage({ type: 'error', text: 'Ralat sambungan pelayan.' });
+      processLocalScan(query);
     }
     setScanInput('');
   };
 
-  // Quick toggle status via API
+  // Quick toggle status
   const toggleStatus = async (id: string) => {
     if (roleMode === 'user') {
       alert('Akses Terhad: Hanya Panel Admin (Mohd Zahari / Noradilah) sahaja dibenarkan menukar status secara manual.');
       return;
     }
+    const nowTime = new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' });
+    const target = participants.find(p => p.id === id);
+    const newStatus = target?.status === 'Hadir' ? 'Belum Hadir' : 'Hadir';
+    const newMasa = newStatus === 'Hadir' ? (target?.masaHadir || nowTime) : '';
+
+    const updated = participants.map(p => {
+      if (p.id === id) {
+        return {
+          ...p,
+          status: newStatus as 'Hadir' | 'Belum Hadir',
+          masaHadir: newStatus === 'Hadir' ? (p.masaHadir || nowTime) : undefined
+        };
+      }
+      return p;
+    });
+    setParticipants(updated);
+    localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(updated));
+
+    // Firestore live update
+    try {
+      updateDoc(doc(db, 'participants', id), {
+        status: newStatus,
+        masaHadir: newMasa
+      });
+    } catch (e) {}
+
     try {
       const res = await fetch('/api/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id })
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setParticipants(data.participants);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setParticipants(data.participants);
       }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) {}
   };
 
   const deleteParticipant = async (id: string) => {
     if (roleMode === 'user') return;
     if (confirm('Adakah anda pasti ingin memadam peserta ini?')) {
+      const updated = participants.filter(p => p.id !== id);
+      setParticipants(updated);
+      localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(updated));
+
+      // Firestore live delete
+      try {
+        deleteDoc(doc(db, 'participants', id));
+      } catch (e) {}
+
       try {
         const res = await fetch('/api/delete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id })
         });
-        const data = await res.json();
-        if (res.ok && data.success) setParticipants(data.participants);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) setParticipants(data.participants);
+        }
       } catch (e) {}
     }
   };
@@ -248,13 +432,39 @@ export default function App() {
   const resetAllAttendance = async () => {
     if (roleMode === 'user') return;
     if (confirm('⚠️ PERHATIAN: Adakah anda pasti ingin menetapkan semula SEMUA status kehadiran kepada Belum Hadir?')) {
+      const resetList = participants.map(p => ({
+        ...p,
+        status: 'Belum Hadir' as const,
+        masaHadir: undefined
+      }));
+      setParticipants(resetList);
+      localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(resetList));
+      setLastScanned(null);
+      setScanMessage(null);
+
+      // Firestore live batch reset
+      try {
+        const batch = writeBatch(db);
+        participants.forEach(p => {
+          batch.update(doc(db, 'participants', p.id), {
+            status: 'Belum Hadir',
+            masaHadir: ''
+          });
+        });
+        await batch.commit();
+      } catch (e) {
+        console.warn("Firestore batch reset notice:", e);
+      }
+
       try {
         const res = await fetch('/api/reset', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         });
-        const data = await res.json();
-        if (res.ok && data.success) setParticipants(data.participants);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) setParticipants(data.participants);
+        }
       } catch (e) {}
     }
   };
@@ -272,21 +482,39 @@ export default function App() {
       return;
     }
 
+    const created: Participant = {
+      id: String(Date.now()),
+      namaPenuh: newParticipant.namaPenuh.trim().toUpperCase(),
+      noKp: cleanIc,
+      email: `${cleanIc}@moe-dl.edu.my`,
+      jawatan: newParticipant.jawatan,
+      status: 'Belum Hadir'
+    };
+
+    const updated = [...participants, created];
+    setParticipants(updated);
+    localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(updated));
+    setNewParticipant({ namaPenuh: '', noKp: '', jawatan: 'Guru Akademik (DG5)' });
+    setIsAddModalOpen(false);
+
+    // Firestore live add
+    try {
+      await setDoc(doc(db, 'participants', created.id), created);
+    } catch (e) {}
+
     try {
       const res = await fetch('/api/participants', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          namaPenuh: newParticipant.namaPenuh,
-          noKp: cleanIc,
-          jawatan: newParticipant.jawatan
+          namaPenuh: created.namaPenuh,
+          noKp: created.noKp,
+          jawatan: created.jawatan
         })
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setParticipants(data.participants);
-        setNewParticipant({ namaPenuh: '', noKp: '', jawatan: 'Guru Akademik (DG5)' });
-        setIsAddModalOpen(false);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setParticipants(data.participants);
       }
     } catch (e) {}
   };

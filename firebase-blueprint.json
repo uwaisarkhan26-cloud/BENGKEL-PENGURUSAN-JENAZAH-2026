@@ -1,0 +1,51 @@
+{
+  "entities": {
+    "Participant": {
+      "title": "Participant",
+      "description": "Maklumat staf / peserta SK Kepawa bagi Bengkel Pengurusan Jenazah 2026",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "ID unik peserta"
+        },
+        "namaPenuh": {
+          "type": "string",
+          "description": "Nama penuh peserta mengikut HRMIS"
+        },
+        "noKp": {
+          "type": "string",
+          "description": "12 digit Nombor Kad Pengenalan peserta"
+        },
+        "email": {
+          "type": "string",
+          "description": "Emel DELIMa atau MOE peserta"
+        },
+        "jawatan": {
+          "type": "string",
+          "description": "Jawatan HRMIS peserta"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status kehadiran",
+          "enum": ["Hadir", "Belum Hadir"]
+        },
+        "masaHadir": {
+          "type": "string",
+          "description": "Masa kehadiran direkodkan"
+        },
+        "nota": {
+          "type": "string",
+          "description": "Nota catatan kehadiran"
+        }
+      },
+      "required": ["id", "namaPenuh", "noKp", "jawatan", "status"]
+    }
+  },
+  "firestore": {
+    "/participants/{participantId}": {
+      "schema": "Participant",
+      "description": "Koleksi data kehadiran peserta dan staf SK Kepawa secara langsung (Live Sync)"
+    }
+  }
+}
