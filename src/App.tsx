@@ -20,13 +20,13 @@ export interface Participant {
 export default function App() {
   const [participants, setParticipants] = useState<Participant[]>([]);
 
-  // Role state: 'admin' (Mohd Zahari or Noradilah) vs 'user' (Participant / Public Scanner mode)
+  // Role state: 'admin' (Mohd Zahari or Noradilah) vs 'user' (Guru / Staf - Isi Kehadiran Sahaja)
   const [roleMode, setRoleMode] = useState<'admin' | 'user'>(() => {
-    return localStorage.getItem('sk_kepawa_role_mode') === 'user' ? 'user' : 'admin';
+    return localStorage.getItem('sk_kepawa_role_mode') === 'admin' ? 'admin' : 'user';
   });
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'scanner' | 'live' | 'participants' | 'reports' | 'selfcheck'>(() => {
-    return localStorage.getItem('sk_kepawa_role_mode') === 'user' ? 'scanner' : 'dashboard';
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'scanner' | 'live' | 'participants' | 'reports'>(() => {
+    return localStorage.getItem('sk_kepawa_role_mode') === 'admin' ? 'dashboard' : 'scanner';
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -319,99 +319,95 @@ export default function App() {
                 <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
                   roleMode === 'admin' 
                     ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
-                    : 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                    : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
                 }`}>
-                  {roleMode === 'admin' ? `Admin: ${currentAdmin.namaPenuh}` : 'Mod Pengguna / Staf (Scan Sahaja)'}
+                  {roleMode === 'admin' ? `Admin: ${currentAdmin.namaPenuh}` : 'Portal Isi Kehadiran Guru & Staf'}
                 </span>
-                <span className="text-slate-400 text-xs">05 Nov 2026</span>
+                <span className="text-slate-400 text-xs hidden sm:inline">05 Nov 2026 • Dewan Mini SK Kepawa</span>
               </div>
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+              <h1 className="text-base sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 <span>Bengkel Pengurusan Jenazah Peringkat SK Kepawa 2026</span>
               </h1>
             </div>
           </div>
 
-          <div className="hidden md:flex items-center space-x-4">
-            {/* Role switch toggle */}
-            <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1">
-              <button
-                onClick={() => {
-                  setRoleMode('admin');
-                  setIsAdminModalOpen(true);
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  roleMode === 'admin' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                Panel Admin
-              </button>
-              <button
-                onClick={() => {
-                  setRoleMode('user');
-                  setActiveTab('scanner');
-                }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                  roleMode === 'user' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <UserCheck className="w-3.5 h-3.5" />
-                Mod Scanner
-              </button>
-            </div>
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            {roleMode === 'admin' ? (
+              <>
+                {/* Admin role switch buttons */}
+                <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1">
+                  <button
+                    onClick={() => setIsAdminModalOpen(true)}
+                    className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-600 text-white shadow-md cursor-pointer"
+                    title="Pilih Akaun Admin"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Panel Admin</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRoleMode('user');
+                      setActiveTab('scanner');
+                    }}
+                    className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 text-slate-400 hover:text-white cursor-pointer"
+                    title="Tukar ke Mod Isi Kehadiran Sahaja"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>Mod Isi Kehadiran</span>
+                  </button>
+                </div>
 
-            {roleMode === 'admin' && (
-              <button 
-                onClick={handleDownloadReportFile} 
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium text-sm transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"
+                <button 
+                  onClick={handleDownloadReportFile} 
+                  className="hidden md:flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl font-medium text-xs transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>PDF</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setIsAdminModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 hover:border-emerald-500/60 hover:text-white transition-all cursor-pointer shadow-sm"
               >
-                <Download className="w-4 h-4" />
-                <span>Muat Turun PDF</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Panel Admin</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="bg-slate-900/90 border-t border-slate-800 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-7xl mx-auto flex space-x-1 overflow-x-auto py-2">
-            {[
-              { id: 'dashboard', label: 'Dashboard Statistik', icon: BarChart3, adminOnly: true },
-              { id: 'live', label: 'Live Monitoring 🔴', icon: Radio, adminOnly: true },
-              { id: 'scanner', label: 'Scanner No. KP', icon: CreditCard, adminOnly: false },
-              { id: 'participants', label: 'Senarai Peserta & Kehadiran', icon: Users, adminOnly: true },
-              { id: 'selfcheck', label: 'Portal Semakan Kendiri', icon: UserCheck, adminOnly: false },
-              { id: 'reports', label: 'Laporan & Cetakan PDF', icon: FileText, adminOnly: true },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              const isLocked = tab.adminOnly && roleMode === 'user';
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    if (isLocked) {
-                      alert('🔒 Akses Terhad: Tab ini hanya boleh diakses oleh Panel Admin (Mohd Zahari / Noradilah). Sila tukar ke Mod Panel Admin.');
-                      return;
-                    }
-                    setActiveTab(tab.id as any);
-                  }}
-                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap cursor-pointer ${
-                    isActive 
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
-                      : isLocked 
-                      ? 'text-slate-600 cursor-not-allowed bg-slate-950/40' 
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                  {isLocked && <Lock className="w-3 h-3 text-slate-500 ml-1" />}
-                </button>
-              );
-            })}
+        {/* Navigation Tabs - Admin Sahaja */}
+        {roleMode === 'admin' && (
+          <div className="bg-slate-900/90 border-t border-slate-800 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto flex space-x-1 overflow-x-auto py-2">
+              {[
+                { id: 'dashboard', label: 'Dashboard Statistik', icon: BarChart3 },
+                { id: 'live', label: 'Live Monitoring 🔴', icon: Radio },
+                { id: 'scanner', label: 'Isi Kehadiran', icon: UserCheck },
+                { id: 'participants', label: 'Senarai Peserta & Kehadiran', icon: Users },
+                { id: 'reports', label: 'Laporan & Cetakan PDF', icon: FileText },
+              ].map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap cursor-pointer ${
+                      isActive 
+                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       {/* Main Content Area */}
@@ -732,23 +728,30 @@ export default function App() {
           </div>
         )}
 
-        {/* ==================== TAB: SCANNER ==================== */}
-        {activeTab === 'scanner' && (
-          <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
+        {/* ==================== TAB: ISI KEHADIRAN (MOD PENGGUNA & ADMIN) ==================== */}
+        {(roleMode === 'user' || activeTab === 'scanner') && (
+          <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn py-2 sm:py-6">
             
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl text-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-500"></div>
+            <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-500"></div>
               
               <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/20">
-                <CreditCard className="w-8 h-8 animate-pulse" />
+                <UserCheck className="w-8 h-8" />
               </div>
 
-              <h2 className="text-2xl font-bold text-white tracking-tight">Scanner Nombor Kad Pengenalan (No. KP)</h2>
-              <p className="text-slate-400 text-sm mt-1 max-w-md mx-auto">
-                Taip atau imbas Nombor Kad Pengenalan (12 digit, cth: <code className="text-emerald-400 font-mono">800808125208</code>) atau sebahagian nombor KP / nama untuk merekodkan kehadiran.
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold mb-3">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span>Pangkalan Data Bersama (Live Cloud Sync)</span>
+              </div>
+
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                Isi Kehadiran Peserta
+              </h2>
+              <p className="text-slate-400 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
+                Sila masukkan 12 digit <span className="text-white font-semibold">Nombor Kad Pengenalan (No. KP)</span> anda tanpa tanda sengkang (-) untuk mengesahkan kehadiran ke Bengkel Pengurusan Jenazah SK Kepawa 2026.
               </p>
 
-              <form onSubmit={handleScanSubmit} className="mt-6 max-w-xl mx-auto">
+              <form onSubmit={handleScanSubmit} className="mt-7 max-w-xl mx-auto">
                 <div className="relative flex items-center">
                   <Search className="absolute left-4 w-5 h-5 text-slate-400" />
                   <input
@@ -756,7 +759,7 @@ export default function App() {
                     type="text"
                     value={scanInput}
                     onChange={(e) => setScanInput(e.target.value)}
-                    placeholder="Masukkan No. Kad Pengenalan (cth: 800808125208)..."
+                    placeholder="Masukkan No. Kad Pengenalan anda (cth: 800808125208)..."
                     className="w-full bg-slate-900 border-2 border-slate-700 focus:border-emerald-500 rounded-2xl py-4 pl-12 pr-32 text-white placeholder-slate-500 text-base focus:outline-none shadow-inner transition-all font-mono"
                     autoFocus
                   />
@@ -764,7 +767,7 @@ export default function App() {
                     type="submit"
                     className="absolute right-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-all shadow-md shadow-emerald-600/30 flex items-center gap-2 cursor-pointer"
                   >
-                    <span>Imbas</span>
+                    <span>Masuk</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -804,40 +807,29 @@ export default function App() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="text-xs text-slate-400 block">Masa Kehadiran</span>
-                    <span className="text-sm font-bold text-emerald-400 font-mono">{lastScanned.masaHadir || 'Selesai'}</span>
+                    <span className="text-xs text-slate-400 block">Status Kehadiran</span>
+                    <span className="text-sm font-bold text-emerald-400 font-mono flex items-center gap-1 justify-end">
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      {lastScanned.masaHadir || 'Hadir'}
+                    </span>
                   </div>
                 </div>
               )}
-            </div>
 
-            {/* Quick List of No. KP for testing in scanner */}
-            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-lg">
-              <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-                <span>Klik Cepat No. KP untuk Simulasi Scanner</span>
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-64 overflow-y-auto pr-1">
-                {participants.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      setScanInput(p.noKp);
-                      if (scanInputRef.current) scanInputRef.current.focus();
-                    }}
-                    className="flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-emerald-700/50 text-left transition-all group cursor-pointer"
-                  >
-                    <div>
-                      <p className="font-semibold text-white text-xs group-hover:text-emerald-300 transition-colors truncate max-w-[200px] sm:max-w-[220px]">{p.namaPenuh}</p>
-                      <p className="text-xs font-mono text-emerald-400 mt-0.5">KP: {p.noKp}</p>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded font-medium ${
-                      p.status === 'Hadir' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-400'
-                    }`}>
-                      {p.status}
-                    </span>
-                  </button>
-                ))}
+              {/* Ringkasan Maklumat Program & Kehadiran untuk Guru */}
+              <div className="mt-8 pt-6 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold block">Tarikh Program</span>
+                  <p className="text-white text-sm font-medium mt-0.5">05 November 2026</p>
+                </div>
+                <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold block">Lokasi Program</span>
+                  <p className="text-white text-sm font-medium mt-0.5">Dewan Mini SK Kepawa</p>
+                </div>
+                <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold block">Kehadiran Semasa</span>
+                  <p className="text-emerald-400 text-sm font-bold mt-0.5 font-mono">{hadirCount} / {totalCount} Staf Hadir</p>
+                </div>
               </div>
             </div>
 
@@ -944,7 +936,7 @@ export default function App() {
                                     : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/20'
                                 }`}
                               >
-                                {p.status === 'Hadir' ? 'Batal Hadir' : 'Tandakan Hadir'}
+                                {p.status === 'Hadir' ? '🔄 Reset Kehadiran' : 'Tandakan Hadir'}
                               </button>
                               <button
                                 onClick={() => setSelectedParticipantForCard(p)}
@@ -970,62 +962,6 @@ export default function App() {
               </div>
             </div>
 
-          </div>
-        )}
-
-        {/* ==================== TAB: SELF CHECK-IN PORTAL ==================== */}
-        {activeTab === 'selfcheck' && (
-          <div className="max-w-xl mx-auto space-y-6 animate-fadeIn py-4">
-            <div className="bg-slate-950 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-
-              <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald-400 border border-emerald-500/30">
-                <CreditCard className="w-8 h-8" />
-              </div>
-
-              <h2 className="text-2xl font-bold text-white">Portal Semakan Kendiri No. KP</h2>
-              <p className="text-slate-400 text-sm mt-2">
-                Staf SK Kepawa boleh memasukkan Nombor Kad Pengenalan masing-masing di bawah untuk mengesahkan kehadiran ke Bengkel Pengurusan Jenazah pada 05 November 2026.
-              </p>
-
-              <form onSubmit={handleScanSubmit} className="mt-6 space-y-4">
-                <div className="text-left">
-                  <label className="block text-xs font-semibold uppercase text-slate-400 mb-2">Nombor Kad Pengenalan (12 digit)</label>
-                  <input
-                    type="text"
-                    value={scanInput}
-                    onChange={(e) => setScanInput(e.target.value)}
-                    placeholder="Cth: 800808125208..."
-                    className="w-full bg-slate-900 border-2 border-slate-700 focus:border-emerald-500 rounded-xl py-3.5 px-4 text-white font-mono text-base focus:outline-none"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Check className="w-5 h-5" />
-                  <span>Sahkan Kehadiran Saya</span>
-                </button>
-              </form>
-
-              {scanMessage && (
-                <div className={`mt-6 p-4 rounded-xl border text-left flex items-start space-x-3 ${
-                  scanMessage.type === 'success' 
-                    ? 'bg-emerald-950/60 border-emerald-700/60 text-emerald-200' 
-                    : scanMessage.type === 'warning'
-                    ? 'bg-amber-950/60 border-amber-700/60 text-amber-200'
-                    : 'bg-red-950/60 border-red-700/60 text-red-200'
-                }`}>
-                  {scanMessage.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />}
-                  {scanMessage.type === 'warning' && <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
-                  {scanMessage.type === 'error' && <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />}
-                  <div className="flex-1 text-sm font-medium">
-                    {scanMessage.text}
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         )}
 
@@ -1195,7 +1131,7 @@ export default function App() {
                 }}
                 className="text-xs text-blue-400 hover:text-blue-300 underline font-medium cursor-pointer"
               >
-                Tukar ke Mod Pengguna (Scanner Sahaja)
+                Tukar ke Mod Pengguna (Isi Kehadiran Sahaja)
               </button>
               <button
                 onClick={() => setIsAdminModalOpen(false)}
