@@ -17,37 +17,8 @@ export interface Participant {
   nota?: string;
 }
 
-const INITIAL_PARTICIPANTS: Participant[] = [
-  { id: '1', namaPenuh: 'ALIZAH BINTI ABD SUILI', noKp: '800808125208', email: 'g-08232901@moe-dl.edu.my', jawatan: 'Guru Prasekolah (DG9)', status: 'Belum Hadir' },
-  { id: '2', namaPenuh: 'ASNAH BINTI MD DANIL', noKp: '790929125478', email: 'g-78232902@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-  { id: '3', namaPenuh: 'MOHD ZAHARI BIN TIBIN', noKp: '730401125977', email: 'g-77263791@moe-dl.edu.my', jawatan: 'Guru Besar (DG6)', status: 'Belum Hadir' },
-  { id: '4', namaPenuh: 'NURTITAH BINTI MEMBUAI', noKp: '680807125966', email: 'g-6632911@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-  { id: '5', namaPenuh: 'FAIRUZ @ SITI FAIRUZ BINTI ABD RAHMAN', noKp: '741008125106', email: 'g-06232904@moe-dl.edu.my', jawatan: 'Guru Penolong Kanan HEM (DG5)', status: 'Belum Hadir' },
-  { id: '6', namaPenuh: 'DAYANG SABARIAH @ MILAH BINTI JOAS', noKp: '720817125330', email: 'g-30232903@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-  { id: '7', namaPenuh: 'ROHIDAH @ NORIDAH BINTI MASLIN', noKp: '720708125366', email: 'g-6632912@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-  { id: '8', namaPenuh: 'SARIPAH BINTI OMAR', noKp: '721113125046', email: 'g-46233078@moe-dl.edu.my', jawatan: 'Guru Pemulihan (DG5)', status: 'Belum Hadir' },
-  { id: '9', namaPenuh: 'SITI HABIBAH BINTI TAIP', noKp: '820303125286', email: 'g-86233208@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-  { id: '10', namaPenuh: 'NORADILAH BINTI RIBUT', noKp: '810929125238', email: 'g-38232909@moe-dl.edu.my', jawatan: 'Guru Pendidikan Islam (DG9)', status: 'Belum Hadir' },
-  { id: '11', namaPenuh: 'NORMAWATI BINTI ISMAIL', noKp: '840406035740', email: 'g-40232910@moe-dl.edu.my', jawatan: 'Guru Pendidikan Islam (DG9)', status: 'Belum Hadir' },
-  { id: '12', namaPenuh: 'SITI HAFIZAH BINTI DURAMAN', noKp: '820611125624', email: 'g-82061112@moe-dl.edu.my', jawatan: 'Pembantu Pengurusan Murid (N1)', status: 'Belum Hadir' },
-  { id: '13', namaPenuh: 'KHAYSAR BIN MOHAMAD NOOR', noKp: '821124126181', email: 'g-81232906@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-  { id: '14', namaPenuh: 'MD HAFIZUDDIN BIN MADINI', noKp: '940317126657', email: 'g-94031712@moe-dl.edu.my', jawatan: 'Pembantu Khidmat Am (H1)', status: 'Belum Hadir' },
-  { id: '15', namaPenuh: 'MIMI NUR SHAHERA BINTI HAMINUS', noKp: '970620016220', email: 'g-20510582@moe-dl.edu.my', jawatan: 'Guru Perpustakaan dan Media (DG9)', status: 'Belum Hadir' },
-  { id: '16', namaPenuh: 'NOORLIANA ERDENAA BINTI MUSNIN', noKp: '970611125994', email: 'g-94575251@moe-dl.edu.my', jawatan: 'Guru Akademik (DG5)', status: 'Belum Hadir' },
-];
-
 export default function App() {
-  const [participants, setParticipants] = useState<Participant[]>(() => {
-    const saved = localStorage.getItem('sk_kepawa_jenazah_2026_participants_ic');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return INITIAL_PARTICIPANTS;
-  });
+  const [participants, setParticipants] = useState<Participant[]>([]);
 
   // Role state: 'admin' (Mohd Zahari or Noradilah) vs 'user' (Participant / Public Scanner mode)
   const [roleMode, setRoleMode] = useState<'admin' | 'user'>(() => {
@@ -65,10 +36,9 @@ export default function App() {
   const [currentAdmin, setCurrentAdmin] = useState<Participant>(() => {
     const saved = localStorage.getItem('sk_kepawa_admin_ic');
     if (saved) {
-      const found = participants.find(p => p.noKp === saved);
-      if (found) return found;
+      // we'll find once participants load
     }
-    return participants.find(p => p.noKp === '730401125977') || participants[0];
+    return { id: '3', namaPenuh: 'MOHD ZAHARI BIN TIBIN', noKp: '730401125977', email: 'g-77263791@moe-dl.edu.my', jawatan: 'Guru Besar (DG6)', status: 'Belum Hadir' };
   });
 
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
@@ -89,22 +59,28 @@ export default function App() {
 
   const [selectedParticipantForCard, setSelectedParticipantForCard] = useState<Participant | null>(null);
 
-  // Cross-tab / cross-device live sync via localStorage events
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'sk_kepawa_jenazah_2026_participants_ic' && e.newValue) {
-        try {
-          setParticipants(JSON.parse(e.newValue));
-        } catch (err) {}
+  // Fetch participants from server API (Live Cloud Sync)
+  const fetchParticipants = async () => {
+    try {
+      const res = await fetch('/api/participants');
+      if (res.ok) {
+        const data = await res.json();
+        setParticipants(data);
+        const savedAdminIc = localStorage.getItem('sk_kepawa_admin_ic') || '730401125977';
+        const foundAdmin = data.find((p: Participant) => p.noKp === savedAdminIc) || data[2] || data[0];
+        if (foundAdmin) setCurrentAdmin(foundAdmin);
       }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
-    localStorage.setItem('sk_kepawa_jenazah_2026_participants_ic', JSON.stringify(participants));
-  }, [participants]);
+    fetchParticipants();
+    // Poll every 3 seconds for live multi-user real-time sync across devices
+    const interval = setInterval(fetchParticipants, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('sk_kepawa_admin_ic', currentAdmin.noKp);
@@ -202,78 +178,88 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  // Handle Scanner submission (by No. KP)
-  const handleScanSubmit = (e: React.FormEvent) => {
+  // Handle Scanner submission (by No. KP via API)
+  const handleScanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const query = scanInput.trim().toLowerCase();
+    const query = scanInput.trim();
     if (!query) return;
 
-    // Search by exact No. KP, partial No. KP, or name
-    const found = participants.find(p => 
-      p.noKp.toLowerCase() === query || 
-      p.noKp.toLowerCase().includes(query) ||
-      p.namaPenuh.toLowerCase().includes(query)
-    );
-
-    if (found) {
-      if (found.status === 'Hadir') {
-        setScanMessage({
-          type: 'warning',
-          text: `⚠️ ${found.namaPenuh} (No. KP: ${found.noKp}) telah pun merekodkan kehadiran pada ${found.masaHadir}.`
-        });
-        setLastScanned(found);
-      } else {
-        const now = new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const updated = participants.map(p => p.id === found.id ? { ...p, status: 'Hadir' as const, masaHadir: now } : p);
-        setParticipants(updated);
-        const updatedParticipant = { ...found, status: 'Hadir' as const, masaHadir: now };
-        setLastScanned(updatedParticipant);
-        setScanMessage({
-          type: 'success',
-          text: `✅ Berjaya! Kehadiran direkodkan untuk ${found.namaPenuh} (No. KP: ${found.noKp}) pada jam ${now}.`
-        });
-      }
-    } else {
-      setScanMessage({
-        type: 'error',
-        text: `❌ Nombor Kad Pengenalan atau nama "${scanInput}" tidak dijumpai dalam rekod HRMIS SK Kepawa 2026.`
+    try {
+      const res = await fetch('/api/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noKp: query })
       });
-      setLastScanned(null);
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setLastScanned(data.participant);
+        if (data.alreadyCheckedIn) {
+          setScanMessage({ type: 'warning', text: data.message });
+        } else {
+          setScanMessage({ type: 'success', text: data.message });
+          fetchParticipants(); // Refresh live data instantly
+        }
+      } else {
+        setScanMessage({ type: 'error', text: data.message || 'Ralat imbasan.' });
+        setLastScanned(null);
+      }
+    } catch (err) {
+      setScanMessage({ type: 'error', text: 'Ralat sambungan pelayan.' });
     }
     setScanInput('');
   };
 
-  // Quick toggle status
-  const toggleStatus = (id: string) => {
+  // Quick toggle status via API
+  const toggleStatus = async (id: string) => {
     if (roleMode === 'user') {
       alert('Akses Terhad: Hanya Panel Admin (Mohd Zahari / Noradilah) sahaja dibenarkan menukar status secara manual.');
       return;
     }
-    setParticipants(participants.map(p => {
-      if (p.id === id) {
-        const newStatus = p.status === 'Hadir' ? 'Belum Hadir' : 'Hadir';
-        const now = newStatus === 'Hadir' ? new Date().toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' }) : undefined;
-        return { ...p, status: newStatus, masaHadir: now };
+    try {
+      const res = await fetch('/api/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setParticipants(data.participants);
       }
-      return p;
-    }));
+    } catch (e) {
+      console.error(e);
+    }
   };
 
-  const deleteParticipant = (id: string) => {
+  const deleteParticipant = async (id: string) => {
     if (roleMode === 'user') return;
     if (confirm('Adakah anda pasti ingin memadam peserta ini?')) {
-      setParticipants(participants.filter(p => p.id !== id));
+      try {
+        const res = await fetch('/api/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) setParticipants(data.participants);
+      } catch (e) {}
     }
   };
 
-  const resetAllAttendance = () => {
+  const resetAllAttendance = async () => {
     if (roleMode === 'user') return;
     if (confirm('⚠️ PERHATIAN: Adakah anda pasti ingin menetapkan semula SEMUA status kehadiran kepada Belum Hadir?')) {
-      setParticipants(participants.map(p => ({ ...p, status: 'Belum Hadir', masaHadir: undefined })));
+      try {
+        const res = await fetch('/api/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) setParticipants(data.participants);
+      } catch (e) {}
     }
   };
 
-  const handleAddParticipant = (e: React.FormEvent) => {
+  const handleAddParticipant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (roleMode === 'user') return;
     if (!newParticipant.namaPenuh || !newParticipant.noKp) {
@@ -286,18 +272,23 @@ export default function App() {
       return;
     }
 
-    const newItem: Participant = {
-      id: Date.now().toString(),
-      namaPenuh: newParticipant.namaPenuh.toUpperCase(),
-      noKp: cleanIc,
-      email: `g-${cleanIc.substring(6)}@moe-dl.edu.my`,
-      jawatan: newParticipant.jawatan,
-      status: 'Belum Hadir'
-    };
-
-    setParticipants([newItem, ...participants]);
-    setNewParticipant({ namaPenuh: '', noKp: '', jawatan: 'Guru Akademik (DG5)' });
-    setIsAddModalOpen(false);
+    try {
+      const res = await fetch('/api/participants', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          namaPenuh: newParticipant.namaPenuh,
+          noKp: cleanIc,
+          jawatan: newParticipant.jawatan
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setParticipants(data.participants);
+        setNewParticipant({ namaPenuh: '', noKp: '', jawatan: 'Guru Akademik (DG5)' });
+        setIsAddModalOpen(false);
+      }
+    } catch (e) {}
   };
 
   // Filtered participants
@@ -348,7 +339,7 @@ export default function App() {
                   setRoleMode('admin');
                   setIsAdminModalOpen(true);
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   roleMode === 'admin' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -360,7 +351,7 @@ export default function App() {
                   setRoleMode('user');
                   setActiveTab('scanner');
                 }}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   roleMode === 'user' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -405,7 +396,7 @@ export default function App() {
                     }
                     setActiveTab(tab.id as any);
                   }}
-                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap cursor-pointer ${
                     isActive 
                       ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
                       : isLocked 
@@ -442,7 +433,7 @@ export default function App() {
                   Dashboard Kehadiran Dewan Mini SK Kepawa
                 </h2>
                 <p className="mt-2 text-slate-300 text-sm sm:text-base leading-relaxed">
-                  Pantau kehadiran warga SK Kepawa pada 05 November 2026 menggunakan No. KP rasmi mengikut pangkalan data HRMIS JPN Sabah.
+                  Pantau kehadiran warga SK Kepawa pada 05 November 2026 secara langsung (Live Cloud Sync).
                 </p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <button 
