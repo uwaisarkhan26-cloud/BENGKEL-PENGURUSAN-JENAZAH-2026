@@ -1,0 +1,6 @@
+{
+  "name": "Dashboard Scanner Kehadiran SK Kepawa 2026",
+  "description": "Sistem Dashboard dan Scanner Kehadiran Bengkel Pengurusan Jenazah Peringkat SK Kepawa 2026 menggunakan ID DELIMa",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
