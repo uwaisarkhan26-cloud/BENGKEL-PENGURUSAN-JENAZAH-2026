@@ -134,21 +134,19 @@ export default function App() {
         }
       }
     } catch (e) {
-      // Running on static hosting like Netlify (keep local data)
+      // Running on static hosting like Netlify (fallback safely)
     }
   };
 
   useEffect(() => {
-    // 1. Local / Express server initial fetch
     fetchParticipants();
 
-    // 2. Real-time multi-device cloud synchronization via Firebase Firestore
+    // Real-time multi-device cloud synchronization via Firebase Firestore
     let unsubscribe = () => {};
     try {
       const colRef = collection(db, 'participants');
       unsubscribe = onSnapshot(colRef, async (snapshot) => {
         if (snapshot.empty) {
-          // Seed the 16 HRMIS SK Kepawa participants if Firestore collection is fresh
           try {
             const batch = writeBatch(db);
             DEFAULT_PARTICIPANTS.forEach(p => {
@@ -233,7 +231,7 @@ export default function App() {
 
     const pin = adminPinInput.trim();
     if (!pin) {
-      setAdminAuthError('Sila masukkan PIN atau kata laluan keselamatan admin.');
+      setAdminAuthError('Sila masukkan PIN keselamatan pentadbir.');
       return;
     }
 
@@ -280,7 +278,7 @@ export default function App() {
   const belumHadirCount = totalCount - hadirCount;
   const attendanceRate = totalCount > 0 ? Math.round((hadirCount / totalCount) * 100) : 0;
 
-  // Direct file download handler for PDF report
+  // Direct file download handler for PDF/HTML report
   const handleDownloadReportFile = () => {
     const reportHtml = `<!DOCTYPE html>
 <html lang="ms">
@@ -289,12 +287,13 @@ export default function App() {
   <title>Laporan Kehadiran Bengkel Pengurusan Jenazah SK Kepawa 2026</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 30px; color: #111; background: #fff; }
-    .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
-    h2, h3 { margin: 5px 0; }
-    .stats { display: flex; justify-content: space-around; background: #f8fafc; border: 1px solid #cbd5e1; padding: 10px; margin-bottom: 20px; text-align: center; border-radius: 6px; }
+    .header { text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px; }
+    h2 { color: #1e3a8a; margin: 6px 0; }
+    h3 { margin: 5px 0; color: #3b82f6; }
+    .stats { display: flex; justify-content: space-around; background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; margin-bottom: 20px; text-align: center; border-radius: 8px; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
     th, td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: left; }
-    th { background-color: #e2e8f0; text-align: center; }
+    th { background-color: #dbeafe; color: #1e3a8a; text-align: center; }
     .text-center { text-align: center; }
     .signatures { display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px; }
   </style>
@@ -329,7 +328,7 @@ export default function App() {
           <td class="text-center">${idx + 1}</td>
           <td><strong>${p.noKp}</strong><br>${p.namaPenuh}</td>
           <td>${p.jawatan}</td>
-          <td class="text-center" style="font-weight: bold; color: ${p.status === 'Hadir' ? '#15803d' : '#b45309'};">${p.status}</td>
+          <td class="text-center" style="font-weight: bold; color: ${p.status === 'Hadir' ? '#1d4ed8' : '#b45309'};">${p.status}</td>
           <td class="text-center">${p.masaHadir || '-'}</td>
         </tr>
       `).join('')}
@@ -362,7 +361,7 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  // Handle Scanner / Isi Kehadiran submission (supports both live API and Netlify static hosting)
+  // Handle Scanner / Isi Kehadiran submission (System ready for use)
   const handleScanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const query = scanInput.trim();
@@ -410,7 +409,7 @@ export default function App() {
         text: `Tahniah! Kehadiran disahkan untuk ${found.namaPenuh} (${found.jawatan}) pada jam ${nowTime}.`
       });
 
-      // Sync to Firebase Firestore (Real-time live multi-device sync for Netlify & all devices)
+      // Sync to Firebase Firestore (Real-time live multi-device sync)
       try {
         updateDoc(doc(db, 'participants', found.id), {
           status: 'Hadir',
@@ -478,12 +477,13 @@ export default function App() {
       if (p.id === id) {
         return {
           ...p,
-          status: newStatus as 'Hadir' | 'Belum Hadir',
-          masaHadir: newStatus === 'Hadir' ? (p.masaHadir || nowTime) : undefined
+          status: newStatus as any,
+          masaHadir: newMasa
         };
       }
       return p;
     });
+
     setParticipants(updated);
     localStorage.setItem('sk_kepawa_attendance_data', JSON.stringify(updated));
 
@@ -592,7 +592,7 @@ export default function App() {
       setLastScanned(null);
       setScanMessage(null);
 
-      // Firestore live batch reset (using batch.set with merge: true for resiliency)
+      // Firestore live batch reset
       try {
         const batch = writeBatch(db);
         participants.forEach(p => {
@@ -704,11 +704,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans">
       
-      {/* Top Header */}
-      <header className="bg-slate-950 border-b border-emerald-900/40 sticky top-0 z-40 shadow-lg">
+      {/* Top Header - Blue Theme */}
+      <header className="bg-slate-950 border-b border-blue-900/40 sticky top-0 z-40 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-emerald-900/30 overflow-hidden border border-emerald-500/30">
+            <div className="w-12 h-12 rounded-xl bg-white p-1 flex items-center justify-center shadow-md shadow-blue-950/40 overflow-hidden border border-blue-500/30">
               <img 
                 src="/assets/aistudio/Logo_Sekolah_Kebangsaan_Kepawa_Khaysar_Mohamad_Noor_f9b71c57.png" 
                 alt="Logo SK Kepawa" 
@@ -719,12 +719,12 @@ export default function App() {
               <div className="flex items-center space-x-2">
                 <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
                   roleMode === 'admin' 
-                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
-                    : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' 
+                    : 'bg-blue-500/10 text-blue-300 border-blue-500/20'
                 }`}>
                   {roleMode === 'admin' ? `Admin: ${currentAdmin.namaPenuh}` : 'Portal Isi Kehadiran Guru & Staf'}
                 </span>
-                <span className="text-slate-400 text-xs hidden sm:inline">05 Nov 2026 • Dewan Mini SK Kepawa</span>
+                <span className="text-slate-400 text-xs hidden sm:inline">05 Nov 2026 • 6:50 Pagi • Dewan Mini SK Kepawa</span>
               </div>
               <h1 className="text-base sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 <span>Bengkel Pengurusan Jenazah Peringkat SK Kepawa 2026</span>
@@ -735,14 +735,14 @@ export default function App() {
           <div className="flex items-center space-x-2 sm:space-x-3">
             {roleMode === 'admin' ? (
               <>
-                {/* Admin role active controls: Switch Admin, Log Keluar */}
+                {/* Admin role active controls */}
                 <div className="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 gap-1">
                   <button
                     onClick={() => {
                       setAdminAuthError(null);
                       setIsAdminModalOpen(true);
                     }}
-                    className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md cursor-pointer"
+                    className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white shadow-md cursor-pointer"
                     title="Pengurusan Pentadbir Bertugas"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" />
@@ -760,7 +760,7 @@ export default function App() {
 
                 <button 
                   onClick={handleDownloadReportFile} 
-                  className="hidden md:flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl font-medium text-xs transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"
+                  className="hidden md:flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 rounded-xl font-medium text-xs transition-all shadow-lg shadow-blue-600/20 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>PDF</span>
@@ -773,17 +773,17 @@ export default function App() {
                   setAdminAuthError(null);
                   setIsAdminModalOpen(true);
                 }}
-                className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-amber-300 hover:text-amber-200 border border-amber-600/40 hover:border-amber-500 transition-all cursor-pointer shadow-md shadow-amber-950/20 group"
+                className="flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-blue-300 hover:text-blue-200 border border-blue-500/30 hover:border-blue-400 transition-all cursor-pointer shadow-md shadow-blue-950/20 group"
                 title="Akses khas untuk Pentadbir sahaja"
               >
-                <Lock className="w-3.5 h-3.5 text-amber-400 group-hover:scale-110 transition-transform" />
+                <Lock className="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition-transform" />
                 <span>Panel Admin (Khas Admin)</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Navigation Tabs - Admin Sahaja */}
+        {/* Navigation Tabs - Admin Sahaja (Blue Palette) */}
         {roleMode === 'admin' && (
           <div className="bg-slate-900/90 border-t border-slate-800 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto flex space-x-1 overflow-x-auto py-2">
@@ -802,7 +802,7 @@ export default function App() {
                     onClick={() => setActiveTab(tab.id as any)}
                     className={`flex items-center space-x-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap cursor-pointer ${
                       isActive 
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' 
                         : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                     }`}
                   >
@@ -819,15 +819,15 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        {/* ==================== TAB: DASHBOARD ==================== */}
+        {/* ==================== TAB: DASHBOARD (BLUE THEME) ==================== */}
         {activeTab === 'dashboard' && roleMode === 'admin' && (
           <div className="space-y-8 animate-fadeIn">
             
-            {/* Banner announcement */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-900/80 via-teal-900/60 to-slate-900 border border-emerald-700/40 p-6 sm:p-8 shadow-xl">
-              <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            {/* Banner announcement - Royal Blue & Deep Navy Gradient */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border border-blue-700/40 p-6 sm:p-8 shadow-xl">
+              <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
               <div className="relative z-10 max-w-2xl">
-                <div className="inline-flex items-center space-x-2 bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full text-xs font-semibold mb-4 border border-emerald-500/30">
+                <div className="inline-flex items-center space-x-2 bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-xs font-semibold mb-4 border border-blue-500/30">
                   <Sparkles className="w-3.5 h-3.5" />
                   <span>Admin: {currentAdmin.namaPenuh} ({currentAdmin.jawatan})</span>
                 </div>
@@ -835,12 +835,37 @@ export default function App() {
                   Dashboard Kehadiran Dewan Mini SK Kepawa
                 </h2>
                 <p className="mt-2 text-slate-300 text-sm sm:text-base leading-relaxed">
-                  Pantau kehadiran warga SK Kepawa pada 05 November 2026 secara langsung (Live Cloud Sync).
+                  Pantau kehadiran warga SK Kepawa pada 05 November 2026 secara langsung dengan penyegerakan awan (Live Cloud Sync).
                 </p>
+
+                {/* Event Schedule Info */}
+                <div className="mt-4 p-3 rounded-2xl bg-slate-900/80 border border-blue-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <Calendar className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>
+                      Tarikh: <strong className="text-white">05 November 2026</strong>
+                    </span>
+                    <span className="text-slate-500">•</span>
+                    <Clock className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>
+                      Masa: <strong className="text-white">6:50 Pagi</strong>
+                    </span>
+                    <span className="text-slate-500">•</span>
+                    <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>
+                      Lokasi: <strong className="text-white">Dewan Mini SK Kepawa</strong>
+                    </span>
+                  </div>
+                  <span className="bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2.5 py-0.5 rounded-full font-semibold text-[11px] flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+                    Sistem Aktif & Sedia Digunakan
+                  </span>
+                </div>
+
                 <div className="mt-6 flex flex-wrap gap-3">
                   <button 
                     onClick={() => setActiveTab('live')} 
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-2 cursor-pointer"
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-5 py-2.5 rounded-xl text-sm transition-all shadow-lg shadow-blue-600/30 flex items-center gap-2 cursor-pointer"
                   >
                     <Radio className="w-4 h-4 animate-pulse" />
                     Buka Live Monitoring
@@ -856,7 +881,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Statistics Cards */}
+            {/* Statistics Cards - Blue Theme */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               
               <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-lg relative overflow-hidden">
@@ -870,13 +895,13 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-lg relative overflow-hidden">
-                <div className="absolute right-4 top-4 w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-400">
+              <div className="bg-slate-950 border border-blue-900/30 rounded-2xl p-6 shadow-lg relative overflow-hidden">
+                <div className="absolute right-4 top-4 w-12 h-12 bg-blue-500/15 rounded-xl flex items-center justify-center text-blue-400">
                   <CheckCircle2 className="w-6 h-6" />
                 </div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Hadir (Checked-In)</p>
-                <p className="text-3xl font-extrabold text-emerald-400 mt-2">{hadirCount}</p>
-                <div className="mt-4 flex items-center text-xs text-emerald-400 font-medium">
+                <p className="text-3xl font-extrabold text-blue-400 mt-2">{hadirCount}</p>
+                <div className="mt-4 flex items-center text-xs text-blue-400 font-medium">
                   <span>Selesai Imbas No. KP</span>
                 </div>
               </div>
@@ -893,13 +918,13 @@ export default function App() {
               </div>
 
               <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-lg relative overflow-hidden">
-                <div className="absolute right-4 top-4 w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center text-teal-400">
+                <div className="absolute right-4 top-4 w-12 h-12 bg-sky-500/10 rounded-xl flex items-center justify-center text-sky-400">
                   <BarChart3 className="w-6 h-6" />
                 </div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Peratus Kehadiran</p>
-                <p className="text-3xl font-extrabold text-teal-400 mt-2">{attendanceRate}%</p>
+                <p className="text-3xl font-extrabold text-sky-400 mt-2">{attendanceRate}%</p>
                 <div className="mt-4 w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                  <div className="bg-teal-500 h-full rounded-full transition-all duration-500" style={{ width: `${attendanceRate}%` }}></div>
+                  <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${attendanceRate}%` }}></div>
                 </div>
               </div>
 
@@ -911,29 +936,36 @@ export default function App() {
               {/* Left Column: Workshop Info */}
               <div className="lg:col-span-1 bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-lg space-y-6">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-emerald-400" />
+                  <Calendar className="w-5 h-5 text-blue-400" />
                   <span>Maklumat Program</span>
                 </h3>
                 <div className="space-y-4 text-sm">
                   <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
-                    <Calendar className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    <Calendar className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-white">Tarikh Program</p>
-                      <p className="text-slate-400 text-xs mt-0.5">05 November 2026 (Rabu)</p>
+                      <p className="text-slate-400 text-xs mt-0.5">05 November 2026 (Khamis)</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
-                    <MapPin className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    <Clock className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-white">Waktu Pendaftaran</p>
+                      <p className="text-blue-300 text-xs mt-0.5 font-mono">Bermula 6:50 Pagi</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
+                    <MapPin className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-white">Tempat Program</p>
                       <p className="text-slate-400 text-xs mt-0.5">Dewan Mini SK Kepawa</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
-                    <UserCog className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    <UserCog className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-white">Pentadbir Bertugas</p>
-                      <p className="text-emerald-300 text-xs mt-0.5 font-medium">{currentAdmin.namaPenuh}</p>
+                      <p className="text-blue-300 text-xs mt-0.5 font-medium">{currentAdmin.namaPenuh}</p>
                     </div>
                   </div>
                 </div>
@@ -946,7 +978,7 @@ export default function App() {
                       className="w-full flex items-center justify-between p-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-sm font-medium transition-all cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
-                        <Plus className="w-4 h-4 text-emerald-400" />
+                        <Plus className="w-4 h-4 text-blue-400" />
                         Tambah Peserta Baru
                       </span>
                       <ArrowRight className="w-4 h-4 text-slate-500" />
@@ -973,10 +1005,10 @@ export default function App() {
               <div className="lg:col-span-2 bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-lg flex flex-col">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <UserCheck className="w-5 h-5 text-emerald-400" />
+                    <UserCheck className="w-5 h-5 text-blue-400" />
                     <span>Aktiviti Kehadiran Terkini</span>
                   </h3>
-                  <span className="text-xs bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full font-medium border border-emerald-500/20">
+                  <span className="text-xs bg-blue-500/15 text-blue-400 px-3 py-1 rounded-full font-medium border border-blue-500/30">
                     {hadirCount} Staf Hadir
                   </span>
                 </div>
@@ -993,22 +1025,22 @@ export default function App() {
                       .filter(p => p.status === 'Hadir')
                       .sort((a, b) => (b.masaHadir || '').localeCompare(a.masaHadir || ''))
                       .map((p) => (
-                        <div key={p.id} className="flex items-center justify-between p-4 rounded-xl bg-slate-900 border border-emerald-900/30 hover:border-emerald-700/50 transition-all">
+                        <div key={p.id} className="flex items-center justify-between p-4 rounded-xl bg-slate-900 border border-blue-900/30 hover:border-blue-700/50 transition-all">
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold text-sm">
+                            <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 font-bold text-sm">
                               {p.namaPenuh.substring(0, 2)}
                             </div>
                             <div>
                               <p className="font-semibold text-white text-sm">{p.namaPenuh}</p>
                               <div className="flex items-center space-x-2 mt-0.5">
-                                <span className="text-xs text-emerald-400 font-mono">No. KP: {p.noKp}</span>
+                                <span className="text-xs text-blue-400 font-mono">No. KP: {p.noKp}</span>
                                 <span className="text-slate-600">•</span>
                                 <span className="text-xs text-slate-400">{p.jawatan}</span>
                               </div>
                             </div>
                           </div>
                           <div className="text-right">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-500/30">
                               <Check className="w-3 h-3" />
                               {p.masaHadir || 'Hadir'}
                             </span>
@@ -1027,25 +1059,25 @@ export default function App() {
         {/* ==================== TAB: LIVE MONITORING ==================== */}
         {activeTab === 'live' && roleMode === 'admin' && (
           <div className="space-y-6 animate-fadeIn">
-            <div className="bg-slate-950 border border-emerald-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-500 via-teal-400 to-blue-500 animate-pulse"></div>
+            <div className="bg-slate-950 border border-blue-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-600 via-sky-400 to-indigo-500 animate-pulse"></div>
 
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                 <div className="flex items-center space-x-3">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-lg shadow-emerald-500/20 animate-pulse">
+                  <div className="w-14 h-14 rounded-2xl bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/20 animate-pulse">
                     <Radio className="w-7 h-7" />
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                      <span className="text-xs font-bold text-emerald-400 tracking-wider uppercase">Live Stream Kehadiran Dewan Mini</span>
+                      <span className="inline-block w-2.5 h-2.5 rounded-full bg-blue-400 animate-ping"></span>
+                      <span className="text-xs font-bold text-blue-400 tracking-wider uppercase">Live Stream Kehadiran Dewan Mini</span>
                     </div>
                     <h2 className="text-2xl font-extrabold text-white mt-1">Pemantauan Langsung (Live Monitoring)</h2>
                   </div>
                 </div>
                 <div className="bg-slate-900 border border-slate-800 px-5 py-3 rounded-2xl text-right">
                   <p className="text-xs text-slate-400 font-semibold uppercase">Status Kehadiran Semasa</p>
-                  <p className="text-2xl font-black text-emerald-400 font-mono mt-0.5">{hadirCount} / {totalCount} <span className="text-xs text-slate-400 font-normal">({attendanceRate}%)</span></p>
+                  <p className="text-2xl font-black text-blue-400 font-mono mt-0.5">{hadirCount} / {totalCount} <span className="text-xs text-slate-400 font-normal">({attendanceRate}%)</span></p>
                 </div>
               </div>
 
@@ -1055,7 +1087,7 @@ export default function App() {
                 {/* Recently Checked-In Live Stream */}
                 <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-lg flex flex-col">
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-emerald-400" />
+                    <Activity className="w-4 h-4 text-blue-400" />
                     <span>Log Masuk Langsung (Real-Time Feed)</span>
                   </h3>
 
@@ -1072,20 +1104,20 @@ export default function App() {
                         .map((p, idx) => (
                           <div key={p.id} className={`p-4 rounded-xl border flex items-center justify-between transition-all ${
                             idx === 0 
-                              ? 'bg-emerald-950/50 border-emerald-500/60 shadow-lg shadow-emerald-500/10 animate-bounce' 
+                              ? 'bg-blue-950/60 border-blue-500/60 shadow-lg shadow-blue-500/10' 
                               : 'bg-slate-950/60 border-slate-800'
                           }`}>
                             <div className="flex items-center space-x-3">
-                              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-sm">
-                                {idx === 0 ? '🔥' : '✅'}
+                              <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-sm">
+                                {idx === 0 ? '✨' : '✓'}
                               </div>
                               <div>
                                 <p className="font-bold text-white text-sm">{p.namaPenuh}</p>
-                                <p className="text-xs font-mono text-emerald-400 mt-0.5">No. KP: {p.noKp} • {p.jawatan}</p>
+                                <p className="text-xs font-mono text-blue-400 mt-0.5">No. KP: {p.noKp} • {p.jawatan}</p>
                               </div>
                             </div>
                             <div className="text-right">
-                              <span className="text-xs bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full font-mono font-bold border border-emerald-500/30">
+                              <span className="text-xs bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full font-mono font-bold border border-blue-500/30">
                                 {p.masaHadir}
                               </span>
                             </div>
@@ -1104,7 +1136,7 @@ export default function App() {
 
                   <div className="space-y-3 overflow-y-auto max-h-[400px] pr-1">
                     {participants.filter(p => p.status === 'Belum Hadir').length === 0 ? (
-                      <div className="text-center py-16 text-emerald-400 font-bold">
+                      <div className="text-center py-16 text-blue-400 font-bold">
                         🎉 Tahniah! Semua 16 staf telah hadir!
                       </div>
                     ) : (
@@ -1123,7 +1155,7 @@ export default function App() {
                             </div>
                             <button
                               onClick={() => toggleStatus(p.id)}
-                              className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
+                              className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-all shadow-md shadow-blue-600/20 cursor-pointer"
                             >
                               Tandakan Hadir
                             </button>
@@ -1138,29 +1170,33 @@ export default function App() {
           </div>
         )}
 
-        {/* ==================== TAB: ISI KEHADIRAN (MOD PENGGUNA & ADMIN) ==================== */}
+        {/* ==================== TAB: ISI KEHADIRAN (SEDIA UNTUK DIGUNAKAN) ==================== */}
         {(roleMode === 'user' || activeTab === 'scanner') && (
           <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn py-2 sm:py-6">
             
             <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-blue-500"></div>
+              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600"></div>
               
-              <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/20">
+              {/* Icon */}
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border shadow-lg bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-blue-500/20">
                 <UserCheck className="w-8 h-8" />
               </div>
 
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold mb-3">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              {/* Status Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold mb-3 border bg-blue-500/10 border-blue-500/30 text-blue-300">
+                <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping"></span>
                 <span>Pangkalan Data Bersama (Live Cloud Sync)</span>
               </div>
 
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 Isi Kehadiran Peserta
               </h2>
+
               <p className="text-slate-400 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
                 Sila masukkan 12 digit <span className="text-white font-semibold">Nombor Kad Pengenalan (No. KP)</span> anda tanpa tanda sengkang (-) untuk mengesahkan kehadiran ke Bengkel Pengurusan Jenazah SK Kepawa 2026.
               </p>
 
+              {/* Form Input - Sedia Digunakan */}
               <form onSubmit={handleScanSubmit} className="mt-7 max-w-xl mx-auto">
                 <div className="relative flex items-center">
                   <Search className="absolute left-4 w-5 h-5 text-slate-400" />
@@ -1170,12 +1206,12 @@ export default function App() {
                     value={scanInput}
                     onChange={(e) => setScanInput(e.target.value)}
                     placeholder="Masukkan No. Kad Pengenalan anda (cth: 800808125208)..."
-                    className="w-full bg-slate-900 border-2 border-slate-700 focus:border-emerald-500 rounded-2xl py-4 pl-12 pr-32 text-white placeholder-slate-500 text-base focus:outline-none shadow-inner transition-all font-mono"
+                    className="w-full bg-slate-900 border-2 border-slate-700 focus:border-blue-500 rounded-2xl py-4 pl-12 pr-32 text-white placeholder-slate-500 text-base focus:outline-none shadow-inner transition-all font-mono"
                     autoFocus
                   />
                   <button
                     type="submit"
-                    className="absolute right-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-all shadow-md shadow-emerald-600/30 flex items-center gap-2 cursor-pointer"
+                    className="absolute right-2 bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-all shadow-md shadow-blue-600/30 flex items-center gap-2 cursor-pointer"
                   >
                     <span>Masuk</span>
                     <ArrowRight className="w-4 h-4" />
@@ -1187,12 +1223,12 @@ export default function App() {
               {scanMessage && (
                 <div className={`mt-6 p-4 rounded-xl border text-left flex items-start space-x-3 transition-all ${
                   scanMessage.type === 'success' 
-                    ? 'bg-emerald-950/60 border-emerald-700/60 text-emerald-200' 
+                    ? 'bg-blue-950/60 border-blue-700/60 text-blue-200' 
                     : scanMessage.type === 'warning'
                     ? 'bg-amber-950/60 border-amber-700/60 text-amber-200'
                     : 'bg-red-950/60 border-red-700/60 text-red-200'
                 }`}>
-                  {scanMessage.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />}
+                  {scanMessage.type === 'success' && <CheckCircle2 className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />}
                   {scanMessage.type === 'warning' && <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
                   {scanMessage.type === 'error' && <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />}
                   <div className="flex-1">
@@ -1205,11 +1241,11 @@ export default function App() {
               {lastScanned && (
                 <div className="mt-6 p-5 rounded-2xl bg-slate-900 border border-slate-800 text-left flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white font-bold text-lg shadow-md">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white font-bold text-lg shadow-md">
                       {lastScanned.namaPenuh.substring(0, 2)}
                     </div>
                     <div>
-                      <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full font-mono border border-emerald-500/30">
+                      <span className="text-xs bg-blue-500/20 text-blue-300 px-2.5 py-0.5 rounded-full font-mono border border-blue-500/30">
                         No. KP: {lastScanned.noKp}
                       </span>
                       <h4 className="font-bold text-white text-base mt-1">{lastScanned.namaPenuh}</h4>
@@ -1218,8 +1254,8 @@ export default function App() {
                   </div>
                   <div className="text-right">
                     <span className="text-xs text-slate-400 block">Status Kehadiran</span>
-                    <span className="text-sm font-bold text-emerald-400 font-mono flex items-center gap-1 justify-end">
-                      <Check className="w-4 h-4 text-emerald-400" />
+                    <span className="text-sm font-bold text-blue-400 font-mono flex items-center gap-1 justify-end">
+                      <Check className="w-4 h-4 text-blue-400" />
                       {lastScanned.masaHadir || 'Hadir'}
                     </span>
                   </div>
@@ -1233,12 +1269,12 @@ export default function App() {
                   <p className="text-white text-sm font-medium mt-0.5">05 November 2026</p>
                 </div>
                 <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
-                  <span className="text-[11px] text-slate-400 uppercase font-semibold block">Lokasi Program</span>
-                  <p className="text-white text-sm font-medium mt-0.5">Dewan Mini SK Kepawa</p>
+                  <span className="text-[11px] text-slate-400 uppercase font-semibold block">Lokasi & Waktu</span>
+                  <p className="text-white text-sm font-medium mt-0.5">Dewan Mini • 6:50 Pagi</p>
                 </div>
                 <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
                   <span className="text-[11px] text-slate-400 uppercase font-semibold block">Kehadiran Semasa</span>
-                  <p className="text-emerald-400 text-sm font-bold mt-0.5 font-mono">{hadirCount} / {totalCount} Staf Hadir</p>
+                  <p className="text-blue-400 text-sm font-bold mt-0.5 font-mono">{hadirCount} / {totalCount} Staf Hadir</p>
                 </div>
               </div>
             </div>
@@ -1246,7 +1282,7 @@ export default function App() {
           </div>
         )}
 
-        {/* ==================== TAB: PARTICIPANTS ==================== */}
+        {/* ==================== TAB: PARTICIPANTS (BLUE PALETTE) ==================== */}
         {activeTab === 'participants' && roleMode === 'admin' && (
           <div className="space-y-6 animate-fadeIn">
             
@@ -1268,7 +1304,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(true)}
-                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-all shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition-all shadow-md shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
                   <span>Tambah Peserta</span>
@@ -1285,7 +1321,7 @@ export default function App() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cari nama, No. KP atau jawatan..."
-                  className="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl py-2 pl-10 pr-4 text-white text-sm focus:outline-none"
+                  className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl py-2 pl-10 pr-4 text-white text-sm focus:outline-none"
                 />
               </div>
 
@@ -1296,7 +1332,7 @@ export default function App() {
                     onClick={() => setStatusFilter(status)}
                     className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                       statusFilter === status 
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' 
                         : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                     }`}
                   >
@@ -1331,14 +1367,14 @@ export default function App() {
                         <tr key={p.id} className="hover:bg-slate-900/50 transition-colors">
                           <td className="py-4 px-6 font-mono text-slate-500">{idx + 1}</td>
                           <td className="py-4 px-6">
-                            <span className="font-mono text-xs text-emerald-400 font-bold block">{p.noKp}</span>
+                            <span className="font-mono text-xs text-blue-400 font-bold block">{p.noKp}</span>
                             <span className="font-semibold text-white block mt-0.5">{p.namaPenuh}</span>
                           </td>
                           <td className="py-4 px-6 text-slate-300 text-xs">{p.jawatan}</td>
                           <td className="py-4 px-6">
                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
                               p.status === 'Hadir' 
-                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
+                                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' 
                                 : 'bg-amber-500/10 text-amber-300 border border-amber-500/20'
                             }`}>
                               {p.status === 'Hadir' ? <Check className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
@@ -1353,7 +1389,7 @@ export default function App() {
                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                                   p.status === 'Hadir'
                                     ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30'
-                                    : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-md shadow-emerald-600/20'
+                                    : 'bg-blue-600 text-white hover:bg-blue-500 shadow-md shadow-blue-600/20'
                                 }`}
                               >
                                 {p.status === 'Hadir' ? '🔄 Reset Kehadiran' : 'Tandakan Hadir'}
@@ -1397,7 +1433,7 @@ export default function App() {
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleDownloadReportFile}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-xl shadow-emerald-600/30 flex items-center gap-2 cursor-pointer"
+                  className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all shadow-xl shadow-blue-600/30 flex items-center gap-2 cursor-pointer"
                 >
                   <Download className="w-5 h-5" />
                   <span>Muat Turun Fail PDF</span>
@@ -1418,24 +1454,24 @@ export default function App() {
               {/* Header Official */}
               <div className="text-center border-b-2 border-slate-900 pb-6 mb-6">
                 <p className="text-xs font-bold uppercase tracking-widest text-slate-600">JABATAN PENDIDIKAN NEGERI SABAH • SEKOLAH KEBANGSAAN KEPAWA (XBA6019)</p>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">LAPORAN RASMI KEHADIRAN BENGKEL PENGURUSAN JENAZAH 2026</h2>
-                <h3 className="text-base font-bold text-emerald-800 mt-2">Tarikh: 05 November 2026 | Tempat: Dewan Mini SK Kepawa</h3>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-blue-950 mt-1">LAPORAN RASMI KEHADIRAN BENGKEL PENGURUSAN JENAZAH 2026</h2>
+                <h3 className="text-base font-bold text-blue-800 mt-2">Tarikh: 05 November 2026 | Tempat: Dewan Mini SK Kepawa</h3>
                 <p className="text-xs text-slate-500 mt-1">Tarikh Cetakan: {new Date().toLocaleDateString('ms-MY', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
               </div>
 
               {/* Summary Stats Grid */}
-              <div className="grid grid-cols-3 gap-4 mb-8 bg-slate-100 p-4 rounded-xl border border-slate-300 text-center">
+              <div className="grid grid-cols-3 gap-4 mb-8 bg-blue-50/60 p-4 rounded-xl border border-blue-200 text-center">
                 <div>
                   <p className="text-xs text-slate-600 uppercase font-semibold">Jumlah Staf</p>
                   <p className="text-xl font-bold text-slate-900 mt-1">{totalCount}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-600 uppercase font-semibold">Hadir</p>
-                  <p className="text-xl font-bold text-emerald-700 mt-1">{hadirCount}</p>
+                  <p className="text-xl font-bold text-blue-700 mt-1">{hadirCount}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-600 uppercase font-semibold">Peratus Kehadiran</p>
-                  <p className="text-xl font-bold text-teal-700 mt-1">{attendanceRate}%</p>
+                  <p className="text-xl font-bold text-indigo-700 mt-1">{attendanceRate}%</p>
                 </div>
               </div>
 
@@ -1443,7 +1479,7 @@ export default function App() {
               <div className="overflow-x-auto mb-8">
                 <table className="w-full text-left border-collapse border border-slate-400 text-xs">
                   <thead>
-                    <tr className="bg-slate-200 text-slate-900">
+                    <tr className="bg-blue-100 text-slate-900">
                       <th className="border border-slate-400 p-2.5 text-center w-12">Bil</th>
                       <th className="border border-slate-400 p-2.5">NO. KAD PENGENALAN / NAMA PENUH</th>
                       <th className="border border-slate-400 p-2.5">JAWATAN (HRMIS)</th>
@@ -1456,12 +1492,12 @@ export default function App() {
                       <tr key={p.id} className="hover:bg-slate-50">
                         <td className="border border-slate-400 p-2 text-center font-mono">{idx + 1}</td>
                         <td className="border border-slate-400 p-2">
-                          <span className="font-mono text-emerald-800 font-bold block">{p.noKp}</span>
+                          <span className="font-mono text-blue-800 font-bold block">{p.noKp}</span>
                           <span className="font-bold text-slate-900 block">{p.namaPenuh}</span>
                         </td>
                         <td className="border border-slate-400 p-2">{p.jawatan}</td>
                         <td className="border border-slate-400 p-2 text-center font-semibold">
-                          <span className={p.status === 'Hadir' ? 'text-emerald-700' : 'text-amber-700'}>
+                          <span className={p.status === 'Hadir' ? 'text-blue-700' : 'text-amber-700'}>
                             {p.status}
                           </span>
                         </td>
@@ -1511,8 +1547,8 @@ export default function App() {
             </button>
 
             <div className="text-center mb-6">
-              <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3 text-emerald-400 shadow-lg shadow-emerald-500/10">
-                {roleMode === 'admin' ? <ShieldCheck className="w-7 h-7 text-emerald-400" /> : <Lock className="w-7 h-7 text-amber-400" />}
+              <div className="w-14 h-14 bg-blue-500/10 border border-blue-500/30 rounded-2xl flex items-center justify-center mx-auto mb-3 text-blue-400 shadow-lg shadow-blue-500/10">
+                {roleMode === 'admin' ? <ShieldCheck className="w-7 h-7 text-blue-400" /> : <Lock className="w-7 h-7 text-amber-400" />}
               </div>
               <h3 className="text-xl font-bold text-white">
                 {roleMode === 'admin' ? 'Pengurusan Pentadbir Bengkel' : 'Pengesahan Panel Admin'}
@@ -1527,16 +1563,16 @@ export default function App() {
             {roleMode === 'admin' ? (
               /* Already authenticated Admin view */
               <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-emerald-950/40 border border-emerald-700/50">
+                <div className="p-4 rounded-2xl bg-blue-950/40 border border-blue-700/50">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Pentadbir Aktif Semasa</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Pentadbir Aktif Semasa</span>
                       <p className="font-bold text-white text-sm mt-0.5">{currentAdmin.namaPenuh}</p>
                       <p className="text-xs text-slate-300">{currentAdmin.jawatan}</p>
-                      <p className="text-xs font-mono text-emerald-400 mt-1">No. KP: {currentAdmin.noKp}</p>
+                      <p className="text-xs font-mono text-blue-400 mt-1">No. KP: {currentAdmin.noKp}</p>
                     </div>
-                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5 text-emerald-400" /> Aktif
+                    <span className="bg-blue-500/20 text-blue-300 border border-blue-500/40 font-semibold text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5 text-blue-400" /> Aktif
                     </span>
                   </div>
                 </div>
@@ -1564,7 +1600,7 @@ export default function App() {
                           }}
                           className={`w-full p-3 rounded-xl border text-left text-xs transition-all flex items-center justify-between ${
                             isCurrent
-                              ? 'bg-slate-900 border-emerald-500/60 text-white cursor-default'
+                              ? 'bg-slate-900 border-blue-500/60 text-white cursor-default'
                               : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800 hover:border-slate-700 text-slate-300 cursor-pointer'
                           }`}
                         >
@@ -1573,7 +1609,7 @@ export default function App() {
                             <p className="text-slate-400 text-[11px] mt-0.5">{adm.role}</p>
                             <p className="text-slate-500 text-[10px] font-mono mt-0.5">No. KP: {adm.ic}</p>
                           </div>
-                          {isCurrent && <Check className="w-4 h-4 text-emerald-400" />}
+                          {isCurrent && <Check className="w-4 h-4 text-blue-400" />}
                         </button>
                       );
                     })}
@@ -1616,17 +1652,17 @@ export default function App() {
                           }}
                           className={`p-3.5 rounded-xl border text-left cursor-pointer transition-all flex items-center justify-between ${
                             isSelected
-                              ? 'bg-emerald-950/50 border-emerald-500 shadow-md shadow-emerald-500/10'
+                              ? 'bg-blue-950/50 border-blue-500 shadow-md shadow-blue-500/10'
                               : 'bg-slate-900 border-slate-800 hover:bg-slate-800/80 text-slate-300'
                           }`}
                         >
                           <div>
                             <p className="font-bold text-white text-xs sm:text-sm">{adm.name}</p>
-                            <p className="text-[11px] text-emerald-400 mt-0.5">{adm.role}</p>
+                            <p className="text-[11px] text-blue-400 mt-0.5">{adm.role}</p>
                             <p className="text-[10px] font-mono text-slate-400 mt-0.5">No. KP: {adm.ic}</p>
                           </div>
                           <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
-                            isSelected ? 'border-emerald-500 bg-emerald-500 text-slate-950' : 'border-slate-600'
+                            isSelected ? 'border-blue-500 bg-blue-500 text-white' : 'border-slate-600'
                           }`}>
                             {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
                           </div>
@@ -1639,7 +1675,7 @@ export default function App() {
                 <div>
                   <label className="block text-xs font-semibold uppercase text-slate-400 mb-1.5 flex items-center justify-between">
                     <span>PIN Keselamatan Pentadbir</span>
-                    <span className="text-[10px] text-amber-400 font-normal">Khas Admin</span>
+                    <span className="text-[10px] text-blue-400 font-normal">Khas Admin</span>
                   </label>
                   <div className="relative">
                     <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -1651,7 +1687,7 @@ export default function App() {
                         setAdminAuthError(null);
                       }}
                       placeholder="Masukkan PIN Keselamatan Pentadbir..."
-                      className="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl py-2.5 pl-10 pr-10 text-white text-sm focus:outline-none font-mono"
+                      className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl py-2.5 pl-10 pr-10 text-white text-sm focus:outline-none font-mono"
                       autoFocus
                     />
                     <button
@@ -1686,7 +1722,7 @@ export default function App() {
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 cursor-pointer"
+                    className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all shadow-lg shadow-blue-600/30 flex items-center gap-1.5 cursor-pointer"
                   >
                     <ShieldCheck className="w-4 h-4" />
                     <span>Buka Panel Admin</span>
@@ -1721,7 +1757,7 @@ export default function App() {
                   value={newParticipant.namaPenuh}
                   onChange={(e) => setNewParticipant({ ...newParticipant, namaPenuh: e.target.value })}
                   placeholder="Cth: AHMAD BIN ALI"
-                  className="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl py-2.5 px-3.5 text-white text-sm focus:outline-none uppercase"
+                  className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl py-2.5 px-3.5 text-white text-sm focus:outline-none uppercase"
                   required
                 />
               </div>
@@ -1733,7 +1769,7 @@ export default function App() {
                   value={newParticipant.noKp}
                   onChange={(e) => setNewParticipant({ ...newParticipant, noKp: e.target.value })}
                   placeholder="Cth: 800808125208"
-                  className="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl py-2.5 px-3.5 text-white font-mono text-sm focus:outline-none"
+                  className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl py-2.5 px-3.5 text-white font-mono text-sm focus:outline-none"
                   required
                 />
               </div>
@@ -1745,7 +1781,7 @@ export default function App() {
                   value={newParticipant.jawatan}
                   onChange={(e) => setNewParticipant({ ...newParticipant, jawatan: e.target.value })}
                   placeholder="Cth: Guru Akademik"
-                  className="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl py-2.5 px-3.5 text-white text-sm focus:outline-none"
+                  className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl py-2.5 px-3.5 text-white text-sm focus:outline-none"
                   required
                 />
               </div>
@@ -1760,7 +1796,7 @@ export default function App() {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
                 >
                   Simpan Peserta
                 </button>
@@ -1775,7 +1811,7 @@ export default function App() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fadeIn">
           <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl text-center relative">
             
-            <div className="w-16 h-16 rounded-2xl bg-white p-1 flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden border border-emerald-500/30">
+            <div className="w-16 h-16 rounded-2xl bg-white p-1 flex items-center justify-center mx-auto mb-4 shadow-lg overflow-hidden border border-blue-500/30">
               <img 
                 src="/assets/aistudio/Logo_Sekolah_Kebangsaan_Kepawa_Khaysar_Mohamad_Noor_f9b71c57.png" 
                 alt="Logo SK Kepawa" 
@@ -1783,7 +1819,7 @@ export default function App() {
               />
             </div>
 
-            <p className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">HRMIS / SK KEPAWA 2026</p>
+            <p className="text-xs font-semibold text-blue-400 uppercase tracking-widest">HRMIS / SK KEPAWA 2026</p>
             <h3 className="text-lg font-bold text-white mt-1">SLIP PENGESAHAN KEHADIRAN</h3>
 
             <div className="my-6 p-5 rounded-2xl bg-slate-900 border border-slate-800 text-left space-y-3">
@@ -1793,7 +1829,7 @@ export default function App() {
               </div>
               <div>
                 <span className="text-[11px] text-slate-400 block uppercase">Nombor Kad Pengenalan</span>
-                <p className="text-emerald-400 font-mono text-sm font-bold">{selectedParticipantForCard.noKp}</p>
+                <p className="text-blue-400 font-mono text-sm font-bold">{selectedParticipantForCard.noKp}</p>
               </div>
               <div>
                 <span className="text-[11px] text-slate-400 block uppercase">Jawatan HRMIS</span>
@@ -1840,7 +1876,7 @@ export default function App() {
             <div className="my-5 p-4 rounded-2xl bg-slate-900 border border-slate-800 text-left space-y-2 text-xs">
               <div className="flex justify-between items-center text-slate-300">
                 <span>Staf Hadir Semasa:</span>
-                <span className="font-bold text-emerald-400 font-mono">{hadirCount} Orang</span>
+                <span className="font-bold text-blue-400 font-mono">{hadirCount} Orang</span>
               </div>
               <div className="flex justify-between items-center text-slate-300">
                 <span>Status Selepas Set Semula:</span>
@@ -1900,7 +1936,7 @@ export default function App() {
 
             <div className="my-4 p-4 rounded-2xl bg-slate-900 border border-slate-800 text-left text-xs space-y-1">
               <p className="font-bold text-white text-sm">{participantToDelete.namaPenuh}</p>
-              <p className="font-mono text-emerald-400 text-xs">No. KP: {participantToDelete.noKp}</p>
+              <p className="font-mono text-blue-400 text-xs">No. KP: {participantToDelete.noKp}</p>
               <p className="text-slate-400">{participantToDelete.jawatan}</p>
             </div>
 
@@ -1931,14 +1967,14 @@ export default function App() {
         <div className="fixed top-5 right-5 z-50 max-w-sm sm:max-w-md animate-fadeIn shadow-2xl">
           <div className={`p-4 rounded-2xl border flex items-start gap-3 backdrop-blur-md ${
             toastNotification.type === 'success' 
-              ? 'bg-emerald-950/95 border-emerald-500/60 text-emerald-100 shadow-emerald-950/60' 
+              ? 'bg-blue-950/95 border-blue-500/60 text-blue-100 shadow-blue-950/60' 
               : toastNotification.type === 'warning'
               ? 'bg-amber-950/95 border-amber-500/60 text-amber-100 shadow-amber-950/60'
               : toastNotification.type === 'error'
               ? 'bg-red-950/95 border-red-500/60 text-red-100 shadow-red-950/60'
               : 'bg-blue-950/95 border-blue-500/60 text-blue-100 shadow-blue-950/60'
           }`}>
-            {toastNotification.type === 'success' && <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />}
+            {toastNotification.type === 'success' && <CheckCircle2 className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />}
             {toastNotification.type === 'warning' && <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />}
             {toastNotification.type === 'error' && <XCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />}
             {toastNotification.type === 'info' && <Check className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />}
