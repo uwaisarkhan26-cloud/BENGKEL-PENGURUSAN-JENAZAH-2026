@@ -4,7 +4,7 @@ import {
   Plus, Trash2, Edit, ShieldCheck, FileText, BarChart3, Calendar, 
   MapPin, UserCheck, RefreshCw, Check, AlertCircle, QrCode, Sparkles,
   ArrowRight, ShieldAlert, CheckSquare, Layers, HelpCircle, CreditCard, Lock, Unlock, UserCog, Radio, Activity,
-  AlertTriangle, X, LogOut, KeyRound, Eye, EyeOff
+  AlertTriangle, X, LogOut, KeyRound, Eye, EyeOff, Timer
 } from 'lucide-react';
 import { db } from './firebase';
 import { 
@@ -46,6 +46,26 @@ export const DEFAULT_PARTICIPANTS: Participant[] = [
   { id: '16', namaPenuh: 'NOORLIANA ERDENAA BINTI MUSNIN', noKp: '970611125994', email: 'g-94575251@moe-dl.edu.my', jawatan: 'Guru Akademik', status: 'Belum Hadir' },
 ];
 
+// Target Unlock: 05 November 2026, 6:30 AM (MYT GMT+8)
+export const TARGET_UNLOCK_DATE = new Date('2026-11-05T06:30:00+08:00');
+
+// Authorized Admins who have 24/7 unlimited access at any time
+export const AUTHORIZED_ADMIN_ICS = ['730401125977', '810929125238'];
+
+export const getCountdown = (now: Date) => {
+  const diffMs = TARGET_UNLOCK_DATE.getTime() - now.getTime();
+  if (diffMs <= 0) {
+    return { isUnlocked: true, days: 0, hours: 0, minutes: 0, seconds: 0 };
+  }
+  const totalSec = Math.floor(diffMs / 1000);
+  const days = Math.floor(totalSec / (3600 * 24));
+  const hours = Math.floor((totalSec % (3600 * 24)) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  const seconds = totalSec % 60;
+
+  return { isUnlocked: false, days, hours, minutes, seconds };
+};
+
 export default function App() {
   const [participants, setParticipants] = useState<Participant[]>(() => {
     try {
@@ -71,6 +91,9 @@ export default function App() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'Semua' | 'Hadir' | 'Belum Hadir'>('Semua');
+
+  // Real-time ticking clock for Date/Time Lock
+  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
 
   // Admin state: Admins are Mohd Zahari Bin Tibin & Noradilah Binti Ribut
   const [currentAdmin, setCurrentAdmin] = useState<Participant>(() => {
@@ -117,6 +140,19 @@ export default function App() {
   const [participantToDelete, setParticipantToDelete] = useState<Participant | null>(null);
   const [toastNotification, setToastNotification] = useState<{ type: 'success' | 'warning' | 'error' | 'info'; message: string } | null>(null);
   const [addFormError, setAddFormError] = useState<string | null>(null);
+
+  // 1-second live clock update
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Admin Verification: Admins Mohd Zahari & Noradilah can open system AT ANY TIME
+  const isAdminActive = roleMode === 'admin' && AUTHORIZED_ADMIN_ICS.includes(currentAdmin.noKp);
+  const countdown = getCountdown(currentTime);
+  const isSystemUnlocked = isAdminActive || countdown.isUnlocked;
 
   // Fetch participants from server API (Live Cloud Sync with local fallback)
   const fetchParticipants = async () => {
@@ -257,7 +293,7 @@ export default function App() {
     setIsAdminModalOpen(false);
     setToastNotification({
       type: 'success',
-      message: `Akses Diberikan: Selamat datang ke Panel Admin, ${matchedAdmin.namaPenuh}!`
+      message: `Akses Pentadbir Dibuka: Selamat datang ${matchedAdmin.namaPenuh}! Sistem kini dibuka sepenuhnya pada bila-bila masa.`
     });
   };
 
@@ -268,7 +304,7 @@ export default function App() {
     setIsAdminModalOpen(false);
     setToastNotification({
       type: 'info',
-      message: 'Anda telah log keluar daripada Panel Admin. Kini dalam Mod Isi Kehadiran.'
+      message: 'Anda telah log keluar daripada Panel Admin.'
     });
   };
 
@@ -361,9 +397,19 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  // Handle Scanner / Isi Kehadiran submission (System ready for use)
+  // Handle Scanner / Isi Kehadiran submission (with 05 Nov 2026 6:30 AM lock & Admin bypass)
   const handleScanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Verify lock: Only admins Mohd Zahari & Noradilah can submit anytime before 05 Nov 2026 6:30 AM
+    if (!isSystemUnlocked) {
+      setScanMessage({
+        type: 'error',
+        text: 'Sistem kehadiran dikunci sehingga 05 November 2026 jam 6.30 pagi. (Hanya Admin Mohd Zahari & Noradilah dibenarkan membuka sistem pada bila-bila masa).'
+      });
+      return;
+    }
+
     const query = scanInput.trim();
     if (!query) return;
 
@@ -724,7 +770,7 @@ export default function App() {
                 }`}>
                   {roleMode === 'admin' ? `Admin: ${currentAdmin.namaPenuh}` : 'Portal Isi Kehadiran Guru & Staf'}
                 </span>
-                <span className="text-slate-400 text-xs hidden sm:inline">05 Nov 2026 • 6:50 Pagi • Dewan Mini SK Kepawa</span>
+                <span className="text-slate-400 text-xs hidden sm:inline">05 Nov 2026 • 6:30 Pagi • Dewan Mini SK Kepawa</span>
               </div>
               <h1 className="text-base sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
                 <span>Bengkel Pengurusan Jenazah Peringkat SK Kepawa 2026</span>
@@ -839,7 +885,7 @@ export default function App() {
                 </p>
 
                 {/* Event Schedule Info */}
-                <div className="mt-4 p-3 rounded-2xl bg-slate-900/80 border border-blue-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="mt-4 p-3.5 rounded-2xl bg-slate-900/80 border border-blue-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
                   <div className="flex items-center gap-2 text-slate-300">
                     <Calendar className="w-4 h-4 text-blue-400 shrink-0" />
                     <span>
@@ -848,7 +894,7 @@ export default function App() {
                     <span className="text-slate-500">•</span>
                     <Clock className="w-4 h-4 text-blue-400 shrink-0" />
                     <span>
-                      Masa: <strong className="text-white">6:50 Pagi</strong>
+                      Buka Umum: <strong className="text-white">6:30 Pagi</strong>
                     </span>
                     <span className="text-slate-500">•</span>
                     <MapPin className="w-4 h-4 text-blue-400 shrink-0" />
@@ -857,8 +903,8 @@ export default function App() {
                     </span>
                   </div>
                   <span className="bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2.5 py-0.5 rounded-full font-semibold text-[11px] flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
-                    Sistem Aktif & Sedia Digunakan
+                    <Check className="w-3.5 h-3.5 text-blue-400" />
+                    Akses Admin Dibuka Bila-Bila Masa
                   </span>
                 </div>
 
@@ -950,8 +996,8 @@ export default function App() {
                   <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
                     <Clock className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-white">Waktu Pendaftaran</p>
-                      <p className="text-blue-300 text-xs mt-0.5 font-mono">Bermula 6:50 Pagi</p>
+                      <p className="font-semibold text-white">Waktu Buka Umum</p>
+                      <p className="text-blue-300 text-xs mt-0.5 font-mono">05 Nov 2026, 6:30 Pagi</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
@@ -964,7 +1010,7 @@ export default function App() {
                   <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
                     <UserCog className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-semibold text-white">Pentadbir Bertugas</p>
+                      <p className="font-semibold text-white">Pentadbir Bertugas (Akses Penuh)</p>
                       <p className="text-blue-300 text-xs mt-0.5 font-medium">{currentAdmin.namaPenuh}</p>
                     </div>
                   </div>
@@ -1170,54 +1216,172 @@ export default function App() {
           </div>
         )}
 
-        {/* ==================== TAB: ISI KEHADIRAN (SEDIA UNTUK DIGUNAKAN) ==================== */}
+        {/* ==================== TAB: ISI KEHADIRAN (LOCK RULES APPLIED) ==================== */}
         {(roleMode === 'user' || activeTab === 'scanner') && (
           <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn py-2 sm:py-6">
             
+            {/* If Admin is logged in, show special Admin status badge */}
+            {isAdminActive && (
+              <div className="p-4 rounded-2xl bg-blue-950/80 border border-blue-500/50 text-blue-200 text-xs flex items-center justify-between gap-3 shadow-lg">
+                <div className="flex items-center gap-2.5">
+                  <ShieldCheck className="w-5 h-5 text-blue-400 shrink-0" />
+                  <div>
+                    <p className="font-bold text-white text-sm">Akses Pentadbir Aktif: {currentAdmin.namaPenuh}</p>
+                    <p className="text-blue-300 text-[11px] mt-0.5">
+                      Sistem dibuka sepenuhnya untuk pentadbir pada bila-bila masa.
+                    </p>
+                  </div>
+                </div>
+                <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 font-semibold text-xs border border-blue-500/40">
+                  Admin Unlocked
+                </span>
+              </div>
+            )}
+
             <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600"></div>
               
               {/* Icon */}
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border shadow-lg bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-blue-500/20">
-                <UserCheck className="w-8 h-8" />
+              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 border shadow-lg ${
+                isSystemUnlocked
+                  ? 'bg-blue-500/20 text-blue-400 border-blue-500/30 shadow-blue-500/20'
+                  : 'bg-amber-500/10 text-amber-400 border-amber-500/30 shadow-amber-950/40 animate-pulse'
+              }`}>
+                {isSystemUnlocked ? <UserCheck className="w-8 h-8" /> : <Lock className="w-8 h-8" />}
               </div>
 
               {/* Status Badge */}
-              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold mb-3 border bg-blue-500/10 border-blue-500/30 text-blue-300">
-                <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping"></span>
-                <span>Pangkalan Data Bersama (Live Cloud Sync)</span>
+              <div className={`inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold mb-3 border ${
+                isSystemUnlocked 
+                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+                  : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${isSystemUnlocked ? 'bg-blue-400 animate-ping' : 'bg-amber-400 animate-pulse'}`}></span>
+                <span>
+                  {isSystemUnlocked 
+                    ? 'Sistem Kehadiran Dibuka (Live Cloud Sync)' 
+                    : 'Sistem Dikunci Sehingga 05 Nov 2026, 6:30 Pagi'}
+                </span>
               </div>
 
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                Isi Kehadiran Peserta
+                {isSystemUnlocked ? 'Isi Kehadiran Peserta' : 'Sistem Kehadiran Dikunci'}
               </h2>
 
-              <p className="text-slate-400 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
-                Sila masukkan 12 digit <span className="text-white font-semibold">Nombor Kad Pengenalan (No. KP)</span> anda tanpa tanda sengkang (-) untuk mengesahkan kehadiran ke Bengkel Pengurusan Jenazah SK Kepawa 2026.
-              </p>
+              {isSystemUnlocked ? (
+                /* Unlocked for Admin or when 05 Nov 2026 6:30 AM is reached */
+                <>
+                  <p className="text-slate-400 text-sm mt-2 max-w-lg mx-auto leading-relaxed">
+                    Sila masukkan 12 digit <span className="text-white font-semibold">Nombor Kad Pengenalan (No. KP)</span> anda tanpa tanda sengkang (-) untuk mengesahkan kehadiran ke Bengkel Pengurusan Jenazah SK Kepawa 2026.
+                  </p>
 
-              {/* Form Input - Sedia Digunakan */}
-              <form onSubmit={handleScanSubmit} className="mt-7 max-w-xl mx-auto">
-                <div className="relative flex items-center">
-                  <Search className="absolute left-4 w-5 h-5 text-slate-400" />
-                  <input
-                    ref={scanInputRef}
-                    type="text"
-                    value={scanInput}
-                    onChange={(e) => setScanInput(e.target.value)}
-                    placeholder="Masukkan No. Kad Pengenalan anda (cth: 800808125208)..."
-                    className="w-full bg-slate-900 border-2 border-slate-700 focus:border-blue-500 rounded-2xl py-4 pl-12 pr-32 text-white placeholder-slate-500 text-base focus:outline-none shadow-inner transition-all font-mono"
-                    autoFocus
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-2 bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-all shadow-md shadow-blue-600/30 flex items-center gap-2 cursor-pointer"
-                  >
-                    <span>Masuk</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  <form onSubmit={handleScanSubmit} className="mt-7 max-w-xl mx-auto">
+                    <div className="relative flex items-center">
+                      <Search className="absolute left-4 w-5 h-5 text-slate-400" />
+                      <input
+                        ref={scanInputRef}
+                        type="text"
+                        value={scanInput}
+                        onChange={(e) => setScanInput(e.target.value)}
+                        placeholder="Masukkan No. Kad Pengenalan anda (cth: 800808125208)..."
+                        className="w-full bg-slate-900 border-2 border-slate-700 focus:border-blue-500 rounded-2xl py-4 pl-12 pr-32 text-white placeholder-slate-500 text-base focus:outline-none shadow-inner transition-all font-mono"
+                        autoFocus
+                      />
+                      <button
+                        type="submit"
+                        className="absolute right-2 bg-blue-600 hover:bg-blue-500 text-white font-medium px-6 py-2.5 rounded-xl text-sm transition-all shadow-md shadow-blue-600/30 flex items-center gap-2 cursor-pointer"
+                      >
+                        <span>Masuk</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </form>
+                </>
+              ) : (
+                /* Locked State: Only opens on 05 Nov 2026 at 6:30 AM, except for Admin */
+                <div className="mt-3 space-y-5">
+                  <p className="text-slate-300 text-sm max-w-lg mx-auto leading-relaxed">
+                    Sistem pendaftaran kehadiran hanya akan dibuka kepada umum pada <span className="text-white font-bold">05 November 2026</span> tepat pada jam <span className="text-amber-300 font-bold">6.30 pagi</span>.
+                  </p>
+
+                  {/* Countdown Box */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-900 border border-blue-500/30 max-w-md mx-auto shadow-inner">
+                    <p className="text-xs uppercase font-bold tracking-wider text-slate-400 mb-3 flex items-center justify-center gap-1.5">
+                      <Timer className="w-4 h-4 text-blue-400" />
+                      <span>Kiraan Detik Pembukaan Rasmi:</span>
+                    </p>
+                    <div className="grid grid-cols-4 gap-2 sm:gap-3 text-center">
+                      <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <span className="block text-2xl sm:text-3xl font-extrabold text-blue-400 font-mono">
+                          {String(countdown.days).padStart(2, '0')}
+                        </span>
+                        <span className="text-[10px] sm:text-xs text-slate-400 uppercase font-semibold">Hari</span>
+                      </div>
+                      <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <span className="block text-2xl sm:text-3xl font-extrabold text-blue-400 font-mono">
+                          {String(countdown.hours).padStart(2, '0')}
+                        </span>
+                        <span className="text-[10px] sm:text-xs text-slate-400 uppercase font-semibold">Jam</span>
+                      </div>
+                      <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <span className="block text-2xl sm:text-3xl font-extrabold text-blue-400 font-mono">
+                          {String(countdown.minutes).padStart(2, '0')}
+                        </span>
+                        <span className="text-[10px] sm:text-xs text-slate-400 uppercase font-semibold">Minit</span>
+                      </div>
+                      <div className="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+                        <span className="block text-2xl sm:text-3xl font-extrabold text-sky-400 font-mono animate-pulse">
+                          {String(countdown.seconds).padStart(2, '0')}
+                        </span>
+                        <span className="text-[10px] sm:text-xs text-slate-400 uppercase font-semibold">Saat</span>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-[11px] text-slate-400 text-center">
+                      Tarikh: <strong className="text-slate-200">05 Nov 2026</strong> • Jam: <strong className="text-slate-200">6:30 Pagi</strong> (Dewan Mini SK Kepawa)
+                    </div>
+                  </div>
+
+                  {/* Form Input - Disabled with Lock */}
+                  <div className="max-w-xl mx-auto relative flex items-center opacity-60 cursor-not-allowed">
+                    <Lock className="absolute left-4 w-5 h-5 text-amber-400" />
+                    <input
+                      type="text"
+                      disabled
+                      placeholder="Sistem Terkunci: Hanya dibuka pada 05 Nov 2026, 6:30 AM..."
+                      className="w-full bg-slate-900 border-2 border-slate-800 rounded-2xl py-4 pl-12 pr-32 text-slate-400 placeholder-slate-500 text-base font-mono cursor-not-allowed"
+                    />
+                    <button
+                      type="button"
+                      disabled
+                      className="absolute right-2 bg-slate-800 text-slate-500 font-medium px-5 py-2.5 rounded-xl text-sm border border-slate-700 cursor-not-allowed flex items-center gap-1.5"
+                    >
+                      <Lock className="w-4 h-4" />
+                      <span>Terkunci</span>
+                    </button>
+                  </div>
+
+                  {/* Direct Admin Login Call-to-action */}
+                  <div className="pt-4 border-t border-slate-800/80 max-w-md mx-auto">
+                    <div className="p-4 rounded-2xl bg-blue-950/40 border border-blue-600/40 text-center space-y-2">
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        Khas bagi Admin <strong className="text-white">MOHD ZAHARI BIN TIBIN</strong> dan <strong className="text-white">NORADILAH BINTI RIBUT</strong>, anda boleh membuka sistem pada bila-bila masa:
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAdminPinInput('');
+                          setAdminAuthError(null);
+                          setIsAdminModalOpen(true);
+                        }}
+                        className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Log Masuk Pentadbir (Buka Sistem Sekarang)</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </form>
+              )}
 
               {/* Scan Message Alert */}
               {scanMessage && (
@@ -1270,7 +1434,7 @@ export default function App() {
                 </div>
                 <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
                   <span className="text-[11px] text-slate-400 uppercase font-semibold block">Lokasi & Waktu</span>
-                  <p className="text-white text-sm font-medium mt-0.5">Dewan Mini • 6:50 Pagi</p>
+                  <p className="text-white text-sm font-medium mt-0.5">Dewan Mini • 6:30 Pagi</p>
                 </div>
                 <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
                   <span className="text-[11px] text-slate-400 uppercase font-semibold block">Kehadiran Semasa</span>
@@ -1555,8 +1719,8 @@ export default function App() {
               </h3>
               <p className="text-slate-400 text-xs mt-1">
                 {roleMode === 'admin' 
-                  ? 'Akses Pentadbir Aktif (Mohd Zahari / Noradilah).' 
-                  : 'Akses terhad: Sila masukkan PIN pentadbir yang sah untuk membuka panel admin.'}
+                  ? 'Akses Pentadbir Aktif (Mohd Zahari / Noradilah) - Dibuka pada bila-bila masa.' 
+                  : 'Khas untuk Mohd Zahari Bin Tibin & Noradilah Binti Ribut (PIN: XBA6019).'}
               </p>
             </div>
 
@@ -1572,7 +1736,7 @@ export default function App() {
                       <p className="text-xs font-mono text-blue-400 mt-1">No. KP: {currentAdmin.noKp}</p>
                     </div>
                     <span className="bg-blue-500/20 text-blue-300 border border-blue-500/40 font-semibold text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5 text-blue-400" /> Aktif
+                      <Check className="w-3.5 h-3.5 text-blue-400" /> Dibuka
                     </span>
                   </div>
                 </div>
