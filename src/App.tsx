@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, CheckCircle2, XCircle, Clock, Printer, Download, Search, 
   Plus, Trash2, Edit, ShieldCheck, FileText, BarChart3, Calendar, 
-  MapPin, UserCheck, RefreshCw, Check, AlertCircle, QrCode, Sparkles,
-  ArrowRight, ShieldAlert, CheckSquare, Layers, HelpCircle, CreditCard, Lock, Unlock, UserCog, Radio, Activity,
-  AlertTriangle, X, LogOut, KeyRound, Eye, EyeOff, Timer
+  MapPin, UserCheck, RefreshCw, RotateCcw, Check, AlertCircle, QrCode, Sparkles,
+  ArrowRight, ShieldAlert, CheckSquare, Square, Layers, HelpCircle, CreditCard, Lock, Unlock, UserCog, Radio, Activity,
+  AlertTriangle, X, LogOut, KeyRound, Eye, EyeOff, Timer, MessageSquare, ThumbsUp, Star, Award, TrendingUp, Send
 } from 'lucide-react';
 import { db } from './firebase';
 import { 
-  collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, writeBatch 
+  collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, writeBatch, getDocs 
 } from 'firebase/firestore';
 
 export interface Participant {
@@ -46,6 +46,79 @@ export const DEFAULT_PARTICIPANTS: Participant[] = [
   { id: '16', namaPenuh: 'NOORLIANA ERDENAA BINTI MUSNIN', noKp: '970611125994', email: 'g-94575251@moe-dl.edu.my', jawatan: 'Guru Akademik', status: 'Belum Hadir' },
 ];
 
+// Feedback Submission Interface
+export interface FeedbackSubmission {
+  id: string;
+  namaPeserta: string;
+  kategori: 'GURU' | 'AKP';
+  // Ratings for aspects 1 to 8 (Scale: 1 - 5)
+  ratings: {
+    pengisian: number;
+    penceramah: number;
+    kefahaman: number;
+    demoMandi: number;
+    demoKafan: number;
+    solatJenazah: number;
+    kelancaran: number;
+    kemudahan: number;
+  };
+  // Impact Checklist
+  impak: {
+    pengetahuanBaharu: boolean;
+    tanggungjawabMuslim: boolean;
+    tatacaraMandiKafan: boolean;
+    caraSolatJenazah: boolean;
+    kepentinganFarduKifayah: boolean;
+  };
+  // Suggestions
+  palingBermanfaat: string;
+  cadanganPenambahbaikan: string;
+  // Overall Rating
+  penilaianKeseluruhan: 'Sangat Baik' | 'Baik' | 'Memuaskan' | 'Kurang Memuaskan';
+  setujuDiteruskan: 'Ya' | 'Tidak';
+  tarikhMasa: string;
+}
+
+// Initial Sample Feedback Data for rich immediate visualization
+export const INITIAL_FEEDBACK_LIST: FeedbackSubmission[] = [
+  {
+    id: 'fb-1',
+    namaPeserta: 'ALIZAH BINTI ABD SUILI',
+    kategori: 'GURU',
+    ratings: { pengisian: 5, penceramah: 5, kefahaman: 5, demoMandi: 5, demoKafan: 5, solatJenazah: 5, kelancaran: 5, kemudahan: 4 },
+    impak: { pengetahuanBaharu: true, tanggungjawabMuslim: true, tatacaraMandiKafan: true, caraSolatJenazah: true, kepentinganFarduKifayah: true },
+    palingBermanfaat: 'Demonstrasi memandikan dan mengkafankan jenazah secara amali sangat jelas dan terperinci.',
+    cadanganPenambahbaikan: 'Kekalkan bengkel praktikal seperti ini setiap tahun.',
+    penilaianKeseluruhan: 'Sangat Baik',
+    setujuDiteruskan: 'Ya',
+    tarikhMasa: '05/11/2026, 08:45 AM'
+  },
+  {
+    id: 'fb-2',
+    namaPeserta: 'MD HAFIZUDDIN BIN MADINI',
+    kategori: 'AKP',
+    ratings: { pengisian: 5, penceramah: 5, kefahaman: 4, demoMandi: 5, demoKafan: 5, solatJenazah: 4, kelancaran: 4, kemudahan: 4 },
+    impak: { pengetahuanBaharu: true, tanggungjawabMuslim: true, tatacaraMandiKafan: true, caraSolatJenazah: true, kepentinganFarduKifayah: true },
+    palingBermanfaat: 'Penerangan fardu kifayah dan tertib mengkafankan jenazah dengan kain kafan yang betul.',
+    cadanganPenambahbaikan: 'Beri peluang kepada semua peserta mencuba sendiri setiap langkah pengurusan jenazah.',
+    penilaianKeseluruhan: 'Sangat Baik',
+    setujuDiteruskan: 'Ya',
+    tarikhMasa: '05/11/2026, 09:15 AM'
+  },
+  {
+    id: 'fb-3',
+    namaPeserta: 'SITI HABIBAH BINTI TAIP',
+    kategori: 'GURU',
+    ratings: { pengisian: 5, penceramah: 5, kefahaman: 5, demoMandi: 5, demoKafan: 5, solatJenazah: 5, kelancaran: 5, kemudahan: 5 },
+    impak: { pengetahuanBaharu: true, tanggungjawabMuslim: true, tatacaraMandiKafan: true, caraSolatJenazah: true, kepentinganFarduKifayah: true },
+    palingBermanfaat: 'Kefahaman tentang niat dan tatacara solat jenazah 4 takbir dengan penuh yakin.',
+    cadanganPenambahbaikan: 'Program yang sangat berfaedah dan wajar diperluaskan kepada komuniti setempat.',
+    penilaianKeseluruhan: 'Sangat Baik',
+    setujuDiteruskan: 'Ya',
+    tarikhMasa: '05/11/2026, 09:40 AM'
+  }
+];
+
 // Target Unlock: 05 November 2026, 6:30 AM (MYT GMT+8)
 export const TARGET_UNLOCK_DATE = new Date('2026-11-05T06:30:00+08:00');
 
@@ -66,6 +139,25 @@ export const getCountdown = (now: Date) => {
   return { isUnlocked: false, days, hours, minutes, seconds };
 };
 
+export const ASPEK_PENILAIAN = [
+  { key: 'pengisian', no: 1, label: 'Pengisian dan kandungan bengkel' },
+  { key: 'penceramah', no: 2, label: 'Penyampaian penceramah' },
+  { key: 'kefahaman', no: 3, label: 'Kefahaman tentang pengurusan jenazah' },
+  { key: 'demoMandi', no: 4, label: 'Demonstrasi memandikan jenazah' },
+  { key: 'demoKafan', no: 5, label: 'Demonstrasi mengkafankan jenazah' },
+  { key: 'solatJenazah', no: 6, label: 'Penerangan solat jenazah' },
+  { key: 'kelancaran', no: 7, label: 'Pengurusan dan kelancaran program' },
+  { key: 'kemudahan', no: 8, label: 'Kemudahan tempat dan peralatan' },
+] as const;
+
+export const SENARAI_IMPAK = [
+  { key: 'pengetahuanBaharu', label: 'Saya mendapat pengetahuan baharu tentang pengurusan jenazah.' },
+  { key: 'tanggungjawabMuslim', label: 'Saya lebih memahami tanggungjawab sebagai seorang Muslim terhadap pengurusan jenazah.' },
+  { key: 'tatacaraMandiKafan', label: 'Saya dapat mengetahui tatacara memandikan dan mengkafankan jenazah.' },
+  { key: 'caraSolatJenazah', label: 'Saya memahami cara melaksanakan solat jenazah.' },
+  { key: 'kepentinganFarduKifayah', label: 'Saya sedar tentang kepentingan ilmu fardu kifayah dalam kehidupan.' },
+] as const;
+
 export default function App() {
   const [participants, setParticipants] = useState<Participant[]>(() => {
     try {
@@ -80,14 +172,24 @@ export default function App() {
     return DEFAULT_PARTICIPANTS;
   });
 
-  // Role state: 'admin' (Mohd Zahari or Noradilah) vs 'user' (Guru / Staf - Isi Kehadiran Sahaja)
+  // Role state: 'admin' (Mohd Zahari or Noradilah) vs 'user' (Guru / Staf)
   const [roleMode, setRoleMode] = useState<'admin' | 'user'>(() => {
     return localStorage.getItem('sk_kepawa_role_mode') === 'admin' ? 'admin' : 'user';
   });
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'scanner' | 'live' | 'participants' | 'reports'>(() => {
-    return localStorage.getItem('sk_kepawa_role_mode') === 'admin' ? 'dashboard' : 'scanner';
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'scanner' | 'live' | 'feedback' | 'participants' | 'reports'>(() => {
+    return localStorage.getItem('sk_kepawa_role_mode') === 'admin' ? 'dashboard' : 'feedback';
   });
+
+  // Attendance lock state: Pendaftaran Kehadiran Dikunci; HANYA Borang Maklum Balas Diaktifkan
+  const [isAttendanceLocked, setIsAttendanceLocked] = useState<boolean>(() => {
+    const saved = localStorage.getItem('sk_kepawa_attendance_locked');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('sk_kepawa_attendance_locked', String(isAttendanceLocked));
+  }, [isAttendanceLocked]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'Semua' | 'Hadir' | 'Belum Hadir'>('Semua');
@@ -126,6 +228,48 @@ export default function App() {
   const [scanMessage, setScanMessage] = useState<{ type: 'success' | 'warning' | 'error'; text: string } | null>(null);
   const scanInputRef = useRef<HTMLInputElement>(null);
 
+  // Feedback list state & active view in Admin mode
+  const [feedbackList, setFeedbackList] = useState<FeedbackSubmission[]>(() => {
+    try {
+      const saved = localStorage.getItem('sk_kepawa_feedback_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return INITIAL_FEEDBACK_LIST;
+  });
+
+  const [feedbackAdminView, setFeedbackAdminView] = useState<'analysis' | 'form'>('analysis');
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+
+  // Form State for Feedback Submission
+  const [feedbackForm, setFeedbackForm] = useState({
+    namaPeserta: '',
+    kategori: 'GURU' as 'GURU' | 'AKP',
+    ratings: {
+      pengisian: 5,
+      penceramah: 5,
+      kefahaman: 5,
+      demoMandi: 5,
+      demoKafan: 5,
+      solatJenazah: 5,
+      kelancaran: 5,
+      kemudahan: 5,
+    },
+    impak: {
+      pengetahuanBaharu: true,
+      tanggungjawabMuslim: true,
+      tatacaraMandiKafan: true,
+      caraSolatJenazah: true,
+      kepentinganFarduKifayah: true,
+    },
+    palingBermanfaat: '',
+    cadanganPenambahbaikan: '',
+    penilaianKeseluruhan: 'Sangat Baik' as 'Sangat Baik' | 'Baik' | 'Memuaskan' | 'Kurang Memuaskan',
+    setujuDiteruskan: 'Ya' as 'Ya' | 'Tidak',
+  });
+
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newParticipant, setNewParticipant] = useState({
@@ -141,6 +285,13 @@ export default function App() {
   const [toastNotification, setToastNotification] = useState<{ type: 'success' | 'warning' | 'error' | 'info'; message: string } | null>(null);
   const [addFormError, setAddFormError] = useState<string | null>(null);
 
+  // Feedback Admin Reset Modal state
+  const [isFeedbackResetModalOpen, setIsFeedbackResetModalOpen] = useState(false);
+  const [feedbackResetPin, setFeedbackResetPin] = useState('');
+  const [feedbackResetError, setFeedbackResetError] = useState<string | null>(null);
+  const [feedbackResetMode, setFeedbackResetMode] = useState<'empty' | 'default'>('empty');
+  const [isFeedbackResetting, setIsFeedbackResetting] = useState(false);
+
   // 1-second live clock update
   useEffect(() => {
     const timer = setInterval(() => {
@@ -153,6 +304,39 @@ export default function App() {
   const isAdminActive = roleMode === 'admin' && AUTHORIZED_ADMIN_ICS.includes(currentAdmin.noKp);
   const countdown = getCountdown(currentTime);
   const isSystemUnlocked = isAdminActive || countdown.isUnlocked;
+
+  // Real-time synchronization for feedback collection via Firestore
+  useEffect(() => {
+    let unsubscribe = () => {};
+    try {
+      const colRef = collection(db, 'feedback');
+      unsubscribe = onSnapshot(colRef, (snapshot) => {
+        if (!snapshot.empty) {
+          const loaded: FeedbackSubmission[] = [];
+          snapshot.forEach(docSnap => {
+            loaded.push(docSnap.data() as FeedbackSubmission);
+          });
+          loaded.sort((a, b) => b.id.localeCompare(a.id));
+          setFeedbackList(loaded);
+          localStorage.setItem('sk_kepawa_feedback_data', JSON.stringify(loaded));
+        } else {
+          // If Firestore feedback collection is fresh, seed initial responses
+          try {
+            const batch = writeBatch(db);
+            INITIAL_FEEDBACK_LIST.forEach(item => {
+              const ref = doc(db, 'feedback', item.id);
+              batch.set(ref, item);
+            });
+            batch.commit().catch(e => console.warn("Feedback seed notice:", e));
+          } catch (e) {}
+        }
+      }, (err) => {
+        console.warn("Feedback live sync notice:", err);
+      });
+    } catch (e) {}
+
+    return () => unsubscribe();
+  }, []);
 
   // Fetch participants from server API (Live Cloud Sync with local fallback)
   const fetchParticipants = async () => {
@@ -169,9 +353,7 @@ export default function App() {
           if (foundAdmin) setCurrentAdmin(foundAdmin);
         }
       }
-    } catch (e) {
-      // Running on static hosting like Netlify (fallback safely)
-    }
+    } catch (e) {}
   };
 
   useEffect(() => {
@@ -253,10 +435,10 @@ export default function App() {
     }
   }, [toastNotification]);
 
-  // Strict RBAC: Non-admin users are strictly restricted to the attendance check-in tab
+  // Non-admin users: Default to 'feedback' (Borang Maklum Balas) since attendance is locked
   useEffect(() => {
-    if (roleMode === 'user' && activeTab !== 'scanner') {
-      setActiveTab('scanner');
+    if (roleMode === 'user' && activeTab !== 'feedback' && activeTab !== 'scanner') {
+      setActiveTab('feedback');
     }
   }, [roleMode, activeTab]);
 
@@ -299,12 +481,12 @@ export default function App() {
 
   const handleAdminLogout = () => {
     setRoleMode('user');
-    setActiveTab('scanner');
+    setActiveTab('feedback');
     localStorage.setItem('sk_kepawa_role_mode', 'user');
     setIsAdminModalOpen(false);
     setToastNotification({
       type: 'info',
-      message: 'Anda telah log keluar daripada Panel Admin.'
+      message: 'Anda telah log keluar daripada Panel Admin. Sistem dibuka pada Borang Maklum Balas.'
     });
   };
 
@@ -315,23 +497,65 @@ export default function App() {
   const attendanceRate = totalCount > 0 ? Math.round((hadirCount / totalCount) * 100) : 0;
 
   // Direct file download handler for PDF/HTML report
-  const handleDownloadReportFile = () => {
-    const reportHtml = `<!DOCTYPE html>
+  // Reusable, robust print handler using an isolated iframe
+  const printHtmlDocument = (title: string, htmlContent: string) => {
+    try {
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(htmlContent);
+        doc.close();
+        setTimeout(() => {
+          try {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+          } catch (e) {
+            console.warn("Iframe print error, falling back to window.print:", e);
+            window.print();
+          } finally {
+            setTimeout(() => {
+              if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+              }
+            }, 3000);
+          }
+        }, 350);
+        return;
+      }
+    } catch (err) {
+      console.warn("Print error, using standard fallback:", err);
+    }
+    window.print();
+  };
+
+  // Generate HTML template for Attendance Report
+  const getAttendanceReportHtmlContent = () => {
+    return `<!DOCTYPE html>
 <html lang="ms">
 <head>
   <meta charset="UTF-8">
   <title>Laporan Kehadiran Bengkel Pengurusan Jenazah SK Kepawa 2026</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 30px; color: #111; background: #fff; }
-    .header { text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 15px; margin-bottom: 20px; }
-    h2 { color: #1e3a8a; margin: 6px 0; }
-    h3 { margin: 5px 0; color: #3b82f6; }
-    .stats { display: flex; justify-content: space-around; background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; margin-bottom: 20px; text-align: center; border-radius: 8px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
-    th, td { border: 1px solid #94a3b8; padding: 6px 8px; text-align: left; }
-    th { background-color: #dbeafe; color: #1e3a8a; text-align: center; }
+    @page { size: A4; margin: 15mm; }
+    body { font-family: Arial, sans-serif; padding: 20px; color: #111; background: #fff; margin: 0; }
+    .header { text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 16px; }
+    h2 { color: #1e3a8a; margin: 4px 0; font-size: 16px; }
+    h3 { margin: 3px 0; color: #2563eb; font-size: 14px; }
+    .stats { display: flex; justify-content: space-around; background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px; margin-bottom: 16px; text-align: center; border-radius: 6px; font-size: 11px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10px; }
+    th, td { border: 1px solid #94a3b8; padding: 5px 7px; text-align: left; }
+    th { background-color: #dbeafe; color: #1e3a8a; text-align: center; font-weight: bold; }
     .text-center { text-align: center; }
-    .signatures { display: flex; justify-content: space-between; margin-top: 50px; font-size: 12px; }
+    .signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 11px; page-break-inside: avoid; }
   </style>
 </head>
 <body>
@@ -385,7 +609,11 @@ export default function App() {
   </div>
 </body>
 </html>`;
+  };
 
+  // Direct file download handler for PDF/HTML report
+  const handleDownloadReportFile = () => {
+    const reportHtml = getAttendanceReportHtmlContent();
     const blob = new Blob([reportHtml], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -397,9 +625,270 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  // Direct print handler for Attendance Report
+  const handlePrintAttendanceReport = () => {
+    printHtmlDocument('Laporan Rasmi Kehadiran SK Kepawa 2026', getAttendanceReportHtmlContent());
+    setToastNotification({
+      type: 'info',
+      message: 'Membuka dialog cetakan Laporan Rasmi Kehadiran...'
+    });
+  };
+
+  // Generate HTML template for Feedback Analysis Report
+  const getFeedbackReportHtmlContent = () => {
+    const totalResponses = feedbackList.length;
+    const guruCount = feedbackList.filter(f => f.kategori === 'GURU').length;
+    const akpCount = feedbackList.filter(f => f.kategori === 'AKP').length;
+
+    // Averages for aspects
+    const aspectAvgs = ASPEK_PENILAIAN.map(asp => {
+      const sum = feedbackList.reduce((acc, f) => acc + (f.ratings[asp.key] || 5), 0);
+      const avg = totalResponses > 0 ? (sum / totalResponses).toFixed(2) : '5.00';
+      return { ...asp, avg };
+    });
+
+    const overallRatingCounts = {
+      'Sangat Baik': feedbackList.filter(f => f.penilaianKeseluruhan === 'Sangat Baik').length,
+      'Baik': feedbackList.filter(f => f.penilaianKeseluruhan === 'Baik').length,
+      'Memuaskan': feedbackList.filter(f => f.penilaianKeseluruhan === 'Memuaskan').length,
+      'Kurang Memuaskan': feedbackList.filter(f => f.penilaianKeseluruhan === 'Kurang Memuaskan').length,
+    };
+
+    const setujuCount = feedbackList.filter(f => f.setujuDiteruskan === 'Ya').length;
+    const setujuPct = totalResponses > 0 ? Math.round((setujuCount / totalResponses) * 100) : 100;
+
+    return `<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <title>Laporan Analisis Maklum Balas Bengkel Pengurusan Jenazah SK Kepawa 2026</title>
+  <style>
+    @page { size: A4; margin: 15mm; }
+    body { font-family: Arial, sans-serif; padding: 20px; color: #111; background: #fff; margin: 0; }
+    .header { text-align: center; border-bottom: 2px solid #1e3a8a; padding-bottom: 12px; margin-bottom: 16px; }
+    h2 { color: #1e3a8a; margin: 4px 0; font-size: 16px; }
+    h3 { margin: 3px 0; color: #2563eb; font-size: 14px; }
+    .stats { display: flex; justify-content: space-around; background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px; margin-bottom: 16px; text-align: center; border-radius: 6px; font-size: 11px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 10px; }
+    th, td { border: 1px solid #94a3b8; padding: 5px 7px; text-align: left; }
+    th { background-color: #dbeafe; color: #1e3a8a; text-align: center; font-weight: bold; }
+    .text-center { text-align: center; }
+    .section-title { font-weight: bold; margin-top: 18px; margin-bottom: 6px; color: #1e3a8a; font-size: 11px; text-transform: uppercase; }
+    .comments-box { background: #f8fafc; border: 1px solid #cbd5e1; padding: 8px; margin-bottom: 6px; border-radius: 4px; font-size: 10px; }
+    .signatures { display: flex; justify-content: space-between; margin-top: 40px; font-size: 11px; page-break-inside: avoid; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <small><strong>JABATAN PENDIDIKAN NEGERI SABAH • SEKOLAH KEBANGSAAN KEPAWA (XBA6019)</strong></small>
+    <h2>LAPORAN ANALISIS MAKLUM BALAS & PENILAIAN BENGKEL</h2>
+    <h3>BENGKEL PENGURUSAN JENAZAH SK KEPAWA 2026</h3>
+    <small>Tarikh Program: 05 November 2026 | Tempat: Dewan Mini SK Kepawa</small>
+  </div>
+  
+  <div class="stats">
+    <div><strong>Jumlah Responden:</strong> ${totalResponses}</div>
+    <div><strong>Guru:</strong> ${guruCount} | <strong>AKP:</strong> ${akpCount}</div>
+    <div><strong>Persetujuan Diteruskan:</strong> ${setujuPct}% (Ya: ${setujuCount})</div>
+  </div>
+
+  <div class="section-title">A. Analisis Skor Penilaian Bengkel (Skala 1 hingga 5)</div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 35px;">Bil</th>
+        <th>Aspek Penilaian</th>
+        <th class="text-center" style="width: 120px;">Purata Skor ( / 5.0)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${aspectAvgs.map(asp => `
+        <tr>
+          <td class="text-center">${asp.no}</td>
+          <td>${asp.label}</td>
+          <td class="text-center" style="font-weight: bold; color: #1d4ed8;">${asp.avg} / 5.00</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+
+  <div class="section-title">B. Penilaian Keseluruhan & Impak</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Tahap Penilaian</th>
+        <th class="text-center">Bilangan Responden</th>
+        <th class="text-center">Peratusan (%)</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${Object.entries(overallRatingCounts).map(([key, val]) => `
+        <tr>
+          <td>${key}</td>
+          <td class="text-center font-bold">${val}</td>
+          <td class="text-center">${totalResponses > 0 ? Math.round((val / totalResponses) * 100) : 0}%</td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+
+  <div class="section-title">C. Maklum Balas, Perkara Paling Bermanfaat & Cadangan Penambahbaikan</div>
+  ${feedbackList.length === 0 ? '<p style="font-size: 11px; color: #64748b; font-style: italic;">Tiada respons maklum balas direkodkan lagi.</p>' : feedbackList.map((f, idx) => `
+    <div class="comments-box">
+      <strong>${idx + 1}. Responden (${f.kategori}): ${f.namaPeserta || 'Tanpa Nama'}</strong> (${f.tarikhMasa})<br>
+      • <em>Perkara Paling Bermanfaat:</em> "${f.palingBermanfaat || '-'}"<br>
+      • <em>Cadangan Penambahbaikan:</em> "${f.cadanganPenambahbaikan || '-'}"
+    </div>
+  `).join('')}
+
+  <div class="signatures">
+    <div>
+      Disediakan Oleh:<br><br><br>
+      <strong>NORADILAH BINTI RIBUT</strong><br>
+      Penyelaras / Admin Bengkel SK Kepawa
+    </div>
+    <div>
+      Disahkan Oleh:<br><br><br>
+      <strong>MOHD ZAHARI BIN TIBIN</strong><br>
+      Guru Besar, SK Kepawa
+    </div>
+  </div>
+</body>
+</html>`;
+  };
+
+  // Direct download handler for Feedback Report PDF/HTML
+  const handleDownloadFeedbackReport = () => {
+    const reportHtml = getFeedbackReportHtmlContent();
+    const blob = new Blob([reportHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Laporan_Analisis_Maklum_Balas_SK_Kepawa_2026.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Direct print handler for Feedback Report
+  const handlePrintFeedbackReport = () => {
+    printHtmlDocument('Laporan Analisis Maklum Balas SK Kepawa 2026', getFeedbackReportHtmlContent());
+    setToastNotification({
+      type: 'info',
+      message: 'Membuka dialog cetakan Laporan Maklum Balas Bengkel...'
+    });
+  };
+
+  // Reset Feedback Form Inputs (for user or admin)
+  const handleResetFeedbackFormFields = () => {
+    setFeedbackForm({
+      namaPeserta: '',
+      kategori: 'GURU',
+      ratings: {
+        pengisian: 5,
+        penceramah: 5,
+        kefahaman: 5,
+        demoMandi: 5,
+        demoKafan: 5,
+        solatJenazah: 5,
+        kelancaran: 5,
+        kemudahan: 5,
+      },
+      impak: {
+        pengetahuanBaharu: true,
+        tanggungjawabMuslim: true,
+        tatacaraMandiKafan: true,
+        caraSolatJenazah: true,
+        kepentinganFarduKifayah: true,
+      },
+      palingBermanfaat: '',
+      cadanganPenambahbaikan: '',
+      penilaianKeseluruhan: 'Sangat Baik',
+      setujuDiteruskan: 'Ya',
+    });
+    setToastNotification({
+      type: 'info',
+      message: 'Borang maklum balas telah dikosongkan.'
+    });
+  };
+
+  // Execute Admin Reset on Feedback Data (Firestore + Local State)
+  const handleExecuteFeedbackReset = async () => {
+    if (roleMode !== 'admin') {
+      setIsFeedbackResetModalOpen(false);
+      return;
+    }
+
+    if (feedbackResetPin.trim().toUpperCase() !== 'XBA6019') {
+      setFeedbackResetError('PIN Pentadbir tidak sah. Sila masukkan Kod PIN SK Kepawa (XBA6019).');
+      return;
+    }
+
+    setIsFeedbackResetting(true);
+    setFeedbackResetError(null);
+
+    try {
+      // 1. Delete all existing feedback records from Firestore
+      try {
+        const colRef = collection(db, 'feedback');
+        const snapshot = await getDocs(colRef);
+        if (!snapshot.empty) {
+          const batch = writeBatch(db);
+          snapshot.forEach(docSnap => {
+            batch.delete(docSnap.ref);
+          });
+          await batch.commit();
+        }
+
+        // If mode is 'default', re-seed standard feedback sample
+        if (feedbackResetMode === 'default') {
+          const batch = writeBatch(db);
+          INITIAL_FEEDBACK_LIST.forEach(item => {
+            const ref = doc(db, 'feedback', item.id);
+            batch.set(ref, item);
+          });
+          await batch.commit();
+        }
+      } catch (err) {
+        console.warn("Firestore feedback reset batch notice:", err);
+      }
+
+      // 2. Update local state
+      const targetList = feedbackResetMode === 'default' ? INITIAL_FEEDBACK_LIST : [];
+      setFeedbackList(targetList);
+      localStorage.setItem('sk_kepawa_feedback_data', JSON.stringify(targetList));
+
+      // 3. Reset form inputs
+      handleResetFeedbackFormFields();
+
+      setIsFeedbackResetModalOpen(false);
+      setFeedbackResetPin('');
+      setToastNotification({
+        type: 'success',
+        message: feedbackResetMode === 'default'
+          ? 'Data maklum balas telah diset semula ke contoh asal.'
+          : 'Semua rekod maklum balas telah dikosongkan (0 responden). Pangkalan data bersedia untuk kutipan baharu.'
+      });
+    } catch (e) {
+      setFeedbackResetError('Ralat berlaku semasa memproses set semula. Sila cuba lagi.');
+    } finally {
+      setIsFeedbackResetting(false);
+    }
+  };
+
   // Handle Scanner / Isi Kehadiran submission (with 05 Nov 2026 6:30 AM lock & Admin bypass)
   const handleScanSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Verify attendance lock: If attendance is locked, reject submission
+    if (isAttendanceLocked && !isAdminActive) {
+      setScanMessage({
+        type: 'error',
+        text: 'PENGESAHAN KEHADIRAN TELAH DIKUNCI / DITUTUP: Sesi kehadiran telah ditutup. Sila lengkapkan Borang Maklum Balas Bengkel sahaja.'
+      });
+      return;
+    }
 
     // Verify lock: Only admins Mohd Zahari & Noradilah can submit anytime before 05 Nov 2026 6:30 AM
     if (!isSystemUnlocked) {
@@ -502,6 +991,49 @@ export default function App() {
       processLocalScan(query);
     }
     setScanInput('');
+  };
+
+  // Handle Feedback Submission
+  const handleFeedbackSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const timestamp = new Date().toLocaleString('ms-MY', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    const newSubmission: FeedbackSubmission = {
+      id: `fb-${Date.now()}`,
+      namaPeserta: feedbackForm.namaPeserta.trim() || 'Peserta SK Kepawa',
+      kategori: feedbackForm.kategori,
+      ratings: { ...feedbackForm.ratings },
+      impak: { ...feedbackForm.impak },
+      palingBermanfaat: feedbackForm.palingBermanfaat.trim(),
+      cadanganPenambahbaikan: feedbackForm.cadanganPenambahbaikan.trim(),
+      penilaianKeseluruhan: feedbackForm.penilaianKeseluruhan,
+      setujuDiteruskan: feedbackForm.setujuDiteruskan,
+      tarikhMasa: timestamp
+    };
+
+    const updatedList = [newSubmission, ...feedbackList];
+    setFeedbackList(updatedList);
+    localStorage.setItem('sk_kepawa_feedback_data', JSON.stringify(updatedList));
+
+    // Sync to Firebase Firestore
+    try {
+      await setDoc(doc(db, 'feedback', newSubmission.id), newSubmission);
+    } catch (e) {
+      console.warn("Feedback Firestore save notice:", e);
+    }
+
+    setFeedbackSubmitted(true);
+    setToastNotification({
+      type: 'success',
+      message: 'Maklum balas anda berjaya dihantar! Terima kasih atas kerjasama anda.'
+    });
   };
 
   // Quick toggle status
@@ -768,7 +1300,7 @@ export default function App() {
                     ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' 
                     : 'bg-blue-500/10 text-blue-300 border-blue-500/20'
                 }`}>
-                  {roleMode === 'admin' ? `Admin: ${currentAdmin.namaPenuh}` : 'Portal Isi Kehadiran Guru & Staf'}
+                  {roleMode === 'admin' ? `Admin: ${currentAdmin.namaPenuh}` : 'Portal Isi Kehadiran & Maklum Balas'}
                 </span>
                 <span className="text-slate-400 text-xs hidden sm:inline">05 Nov 2026 • 6:30 Pagi • Dewan Mini SK Kepawa</span>
               </div>
@@ -829,14 +1361,62 @@ export default function App() {
           </div>
         </div>
 
-        {/* Navigation Tabs - Admin Sahaja (Blue Palette) */}
+        {/* Navigation Tabs - Mode Pengguna (Borang Maklum Balas Diaktifkan & Kehadiran Dikunci) */}
+        {roleMode === 'user' && (
+          <div className="bg-slate-900/90 border-t border-slate-800 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3 py-2.5">
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setActiveTab('feedback');
+                    setFeedbackSubmitted(false);
+                  }}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+                    activeTab === 'feedback'
+                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 ring-2 ring-blue-400/40'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  }`}
+                >
+                  <MessageSquare className="w-4 h-4 text-sky-300" />
+                  <span>Borang Maklum Balas Bengkel</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    Aktif
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('scanner')}
+                  className={`flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                    activeTab === 'scanner'
+                      ? 'bg-slate-800 text-slate-200 border border-slate-700'
+                      : 'text-slate-400 hover:text-slate-300 hover:bg-slate-800/40'
+                  }`}
+                >
+                  <Lock className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Isi Kehadiran Peserta</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Dikunci
+                  </span>
+                </button>
+              </div>
+
+              {/* Notice indicator */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs font-medium">
+                <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                <span>Pengesahan kehadiran telah dikunci. Sila lengkapkan Borang Maklum Balas.</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Tabs - Mode Pentadbir (Blue Palette) */}
         {roleMode === 'admin' && (
           <div className="bg-slate-900/90 border-t border-slate-800 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto flex space-x-1 overflow-x-auto py-2">
               {[
                 { id: 'dashboard', label: 'Dashboard Statistik', icon: BarChart3 },
                 { id: 'live', label: 'Live Monitoring 🔴', icon: Radio },
-                { id: 'scanner', label: 'Isi Kehadiran', icon: UserCheck },
+                { id: 'scanner', label: isAttendanceLocked ? 'Isi Kehadiran (Dikunci)' : 'Isi Kehadiran', icon: isAttendanceLocked ? Lock : UserCheck },
+                { id: 'feedback', label: `Maklum Balas (${feedbackList.length})`, icon: MessageSquare },
                 { id: 'participants', label: 'Senarai Peserta & Kehadiran', icon: Users },
                 { id: 'reports', label: 'Laporan & Cetakan PDF', icon: FileText },
               ].map((tab) => {
@@ -908,6 +1488,28 @@ export default function App() {
                   </span>
                 </div>
 
+                {/* Attendance Lock Status Badge in Dashboard */}
+                <div className="mt-3.5 inline-flex flex-wrap items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs">
+                  <span className={`w-2 h-2 rounded-full ${isAttendanceLocked ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`}></span>
+                  <span className="text-slate-300">
+                    Kawalan Pendaftaran: <strong className={isAttendanceLocked ? 'text-amber-300 font-bold' : 'text-emerald-300 font-bold'}>{isAttendanceLocked ? 'KEHADIRAN DIKUNCI (HANYA MAKLUM BALAS AKTIF)' : 'KEHADIRAN DIBUKA'}</strong>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = !isAttendanceLocked;
+                      setIsAttendanceLocked(next);
+                      setToastNotification({
+                        type: next ? 'warning' : 'success',
+                        message: next ? 'Pendaftaran kehadiran telah dikunci.' : 'Pendaftaran kehadiran telah dibuka semula.'
+                      });
+                    }}
+                    className="ml-2 text-xs text-blue-400 hover:text-blue-300 underline font-semibold cursor-pointer"
+                  >
+                    {isAttendanceLocked ? 'Buka Semula Kehadiran' : 'Kunci Kehadiran'}
+                  </button>
+                </div>
+
                 <div className="mt-6 flex flex-wrap gap-3">
                   <button 
                     onClick={() => setActiveTab('live')} 
@@ -915,6 +1517,13 @@ export default function App() {
                   >
                     <Radio className="w-4 h-4 animate-pulse" />
                     Buka Live Monitoring
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('feedback')} 
+                    className="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium px-5 py-2.5 rounded-xl text-sm transition-all border border-slate-700 flex items-center gap-2 cursor-pointer"
+                  >
+                    <MessageSquare className="w-4 h-4 text-blue-400" />
+                    Lihat Maklum Balas ({feedbackList.length})
                   </button>
                   <button 
                     onClick={() => setActiveTab('reports')} 
@@ -965,12 +1574,12 @@ export default function App() {
 
               <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-lg relative overflow-hidden">
                 <div className="absolute right-4 top-4 w-12 h-12 bg-sky-500/10 rounded-xl flex items-center justify-center text-sky-400">
-                  <BarChart3 className="w-6 h-6" />
+                  <MessageSquare className="w-6 h-6" />
                 </div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Peratus Kehadiran</p>
-                <p className="text-3xl font-extrabold text-sky-400 mt-2">{attendanceRate}%</p>
-                <div className="mt-4 w-full bg-slate-800 rounded-full h-2 overflow-hidden">
-                  <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${attendanceRate}%` }}></div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Maklum Balas Diterima</p>
+                <p className="text-3xl font-extrabold text-sky-400 mt-2">{feedbackList.length}</p>
+                <div className="mt-4 flex items-center text-xs text-sky-400 font-medium">
+                  <span>Responden Borang Maklum Balas</span>
                 </div>
               </div>
 
@@ -1004,7 +1613,7 @@ export default function App() {
                     <MapPin className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-white">Tempat Program</p>
-                      <p className="text-slate-400 text-xs mt-0.5">Dewan Mini SK Kepawa</p>
+                      <p className="text-slate-400 text-xs mt-0.5">Dewan Mini SK Kepawa, Beaufort</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3 p-3 rounded-xl bg-slate-900 border border-slate-800">
@@ -1217,27 +1826,120 @@ export default function App() {
         )}
 
         {/* ==================== TAB: ISI KEHADIRAN (LOCK RULES APPLIED) ==================== */}
-        {(roleMode === 'user' || activeTab === 'scanner') && (
+        {(activeTab === 'scanner') && (
           <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn py-2 sm:py-6">
             
-            {/* If Admin is logged in, show special Admin status badge */}
+            {/* If Admin is logged in, show special Admin status badge & Attendance Lock Toggle */}
             {isAdminActive && (
-              <div className="p-4 rounded-2xl bg-blue-950/80 border border-blue-500/50 text-blue-200 text-xs flex items-center justify-between gap-3 shadow-lg">
+              <div className="p-4 rounded-2xl bg-blue-950/80 border border-blue-500/50 text-blue-200 text-xs flex flex-wrap items-center justify-between gap-3 shadow-lg">
                 <div className="flex items-center gap-2.5">
                   <ShieldCheck className="w-5 h-5 text-blue-400 shrink-0" />
                   <div>
                     <p className="font-bold text-white text-sm">Akses Pentadbir Aktif: {currentAdmin.namaPenuh}</p>
                     <p className="text-blue-300 text-[11px] mt-0.5">
-                      Sistem dibuka sepenuhnya untuk pentadbir pada bila-bila masa.
+                      Status Semasa: <strong className={isAttendanceLocked ? 'text-amber-300' : 'text-emerald-300'}>{isAttendanceLocked ? 'Pendaftaran Kehadiran DIKUNCI' : 'Pendaftaran Kehadiran DIBUKA'}</strong>
                     </p>
                   </div>
                 </div>
-                <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 font-semibold text-xs border border-blue-500/40">
-                  Admin Unlocked
-                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !isAttendanceLocked;
+                    setIsAttendanceLocked(next);
+                    setToastNotification({
+                      type: next ? 'warning' : 'success',
+                      message: next ? 'Pengesahan kehadiran telah dikunci. Hanya Borang Maklum Balas aktif.' : 'Pengesahan kehadiran telah dibuka semula.'
+                    });
+                  }}
+                  className={`px-3.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all shadow-md ${
+                    isAttendanceLocked
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40'
+                      : 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-950/40'
+                  }`}
+                >
+                  {isAttendanceLocked ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                  <span>{isAttendanceLocked ? 'Buka Semula Kehadiran' : 'Kunci Kehadiran'}</span>
+                </button>
               </div>
             )}
 
+            {isAttendanceLocked ? (
+              <div className="bg-slate-950 border-2 border-amber-500/40 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden">
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 via-rose-500 to-amber-500"></div>
+
+                {/* Lock Icon */}
+                <div className="w-20 h-20 rounded-3xl bg-amber-500/10 border-2 border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto mb-4 shadow-xl shadow-amber-950/40">
+                  <Lock className="w-10 h-10 animate-pulse" />
+                </div>
+
+                {/* Status Badge */}
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-bold mb-3 bg-amber-500/15 border border-amber-500/30 text-amber-300">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+                  <span>STATUS: KEHADIRAN TELAH DIKUNCI / DITUTUP</span>
+                </div>
+
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                  Pendaftaran Kehadiran Dikunci
+                </h2>
+
+                <p className="text-slate-300 text-sm mt-3 max-w-lg mx-auto leading-relaxed">
+                  Sesi pendaftaran dan pengesahan kehadiran untuk <span className="text-white font-semibold">Bengkel Pengurusan Jenazah SK Kepawa 2026</span> telah ditutup secara rasmi.
+                </p>
+
+                {/* Call-to-action to fill feedback form */}
+                <div className="my-6 p-5 sm:p-6 rounded-2xl bg-gradient-to-b from-blue-950/70 to-slate-900 border border-blue-500/40 max-w-lg mx-auto text-left shadow-xl shadow-blue-950/40 space-y-3">
+                  <div className="flex items-center gap-2 text-sky-400 font-bold text-sm">
+                    <MessageSquare className="w-5 h-5 text-sky-400 shrink-0" />
+                    <span>HANYA BORANG MAKLUM BALAS SAHAJA AKTIF</span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Semua warga pendidik (GURU) dan staf pelaksana (AKP) diminta untuk mengisi instrumen penilaian bagi merekodkan impak bengkel.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('feedback');
+                      setFeedbackSubmitted(false);
+                    }}
+                    className="w-full mt-2 py-3.5 px-5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 text-white font-bold text-sm shadow-lg shadow-blue-600/40 flex items-center justify-center gap-2 transition-all cursor-pointer group"
+                  >
+                    <span>Isi Borang Maklum Balas Sekarang</span>
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                </div>
+
+                {/* Disabled Input Preview */}
+                <div className="max-w-xl mx-auto relative flex items-center opacity-50 cursor-not-allowed">
+                  <Lock className="absolute left-4 w-5 h-5 text-amber-400" />
+                  <input
+                    type="text"
+                    disabled
+                    placeholder="Pendaftaran Kehadiran Dikunci (Sila Isi Borang Maklum Balas)"
+                    className="w-full bg-slate-900 border-2 border-slate-800 rounded-2xl py-3.5 pl-12 pr-32 text-slate-400 placeholder-slate-500 text-sm font-mono cursor-not-allowed"
+                  />
+                  <span className="absolute right-3 px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-bold border border-amber-500/30">
+                    Dikunci
+                  </span>
+                </div>
+
+                {!isAdminActive && (
+                  <div className="mt-6 pt-4 border-t border-slate-800/80 text-xs text-slate-400">
+                    Pentadbir (Mohd Zahari & Noradilah)?{' '}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAdminPinInput('');
+                        setAdminAuthError(null);
+                        setIsAdminModalOpen(true);
+                      }}
+                      className="text-blue-400 hover:text-blue-300 underline font-semibold cursor-pointer"
+                    >
+                      Buka Panel Admin Di Sini
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
             <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl text-center relative overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600"></div>
               
@@ -1426,6 +2128,25 @@ export default function App() {
                 </div>
               )}
 
+              {/* Call-to-action for Feedback after Check-in */}
+              <div className="mt-6 p-4 rounded-2xl bg-blue-900/30 border border-blue-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-left">
+                <div>
+                  <p className="font-semibold text-white text-xs sm:text-sm">Sedia mengisi Maklum Balas Bengkel?</p>
+                  <p className="text-slate-400 text-xs">Kongsi pandangan dan penilaian anda terhadap bengkel ini.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('feedback');
+                    setFeedbackSubmitted(false);
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/30 whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span>Isi Borang Maklum Balas</span>
+                </button>
+              </div>
+
               {/* Ringkasan Maklumat Program & Kehadiran untuk Guru */}
               <div className="mt-8 pt-6 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
                 <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800">
@@ -1442,6 +2163,611 @@ export default function App() {
                 </div>
               </div>
             </div>
+            )}
+
+          </div>
+        )}
+
+        {/* ==================== TAB: BORANG MAKLUM BALAS & ANALISIS ==================== */}
+        {activeTab === 'feedback' && (
+          <div className="space-y-8 animate-fadeIn py-2 sm:py-6">
+            
+            {/* Admin Switcher Bar (Analysis vs Fill Form) */}
+            {roleMode === 'admin' && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-950 border border-slate-800 p-4 rounded-2xl shadow-lg">
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setFeedbackAdminView('analysis')}
+                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      feedbackAdminView === 'analysis'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                    <span>Analisis & Keputusan Penilaian ({feedbackList.length})</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFeedbackAdminView('form');
+                      setFeedbackSubmitted(false);
+                    }}
+                    className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      feedbackAdminView === 'form'
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
+                        : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span>Borang Isi Maklum Balas</span>
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={handleDownloadFeedbackReport}
+                    className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-600/30 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Muat Turun Analisis PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handlePrintFeedbackReport}
+                    className="bg-slate-800 hover:bg-slate-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Cetak Laporan Analisis Maklum Balas"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Cetak Analisis</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFeedbackResetPin('');
+                      setFeedbackResetError(null);
+                      setIsFeedbackResetModalOpen(true);
+                    }}
+                    className="bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-700/60 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-red-950/30"
+                    title="Set semula rekod maklum balas (Khusus Admin)"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-red-400" />
+                    <span>Set Semula Maklum Balas</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* View 1: Feedback Analysis Dashboard (Admin only) */}
+            {roleMode === 'admin' && feedbackAdminView === 'analysis' ? (
+              <div className="space-y-6">
+                
+                {/* Summary Header */}
+                <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs font-semibold mb-2">
+                        <Award className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Ringkasan Eksekutif Maklum Balas</span>
+                      </div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-white">Analisis Maklum Balas Bengkel Pengurusan Jenazah 2026</h2>
+                      <p className="text-slate-400 text-xs sm:text-sm mt-1">SK Kepawa, Beaufort • Tarikh Program: 05 November 2026</p>
+                    </div>
+
+                    <div className="bg-slate-900 border border-slate-800 px-5 py-3 rounded-2xl text-right">
+                      <span className="text-xs text-slate-400 font-semibold block uppercase">Jumlah Responden</span>
+                      <span className="text-3xl font-black text-blue-400 font-mono mt-0.5">{feedbackList.length}</span>
+                    </div>
+                  </div>
+
+                  {/* Top Stats Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800">
+                      <span className="text-xs text-slate-400 font-semibold block uppercase">Pecahan Kategori</span>
+                      <p className="text-lg font-bold text-white mt-1">
+                        {feedbackList.filter(f => f.kategori === 'GURU').length} Guru • {feedbackList.filter(f => f.kategori === 'AKP').length} AKP
+                      </p>
+                      <p className="text-xs text-blue-400 mt-1">Warga SK Kepawa</p>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800">
+                      <span className="text-xs text-slate-400 font-semibold block uppercase">Penilaian Keseluruhan (Sangat Baik / Baik)</span>
+                      <p className="text-lg font-bold text-emerald-400 mt-1">
+                        {feedbackList.length > 0 
+                          ? Math.round(((feedbackList.filter(f => f.penilaianKeseluruhan === 'Sangat Baik' || f.penilaianKeseluruhan === 'Baik').length) / feedbackList.length) * 100)
+                          : 100}% Positif
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">Tahap Kepuasan Peserta</p>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800">
+                      <span className="text-xs text-slate-400 font-semibold block uppercase">Persetujuan Bengkel Diteruskan</span>
+                      <p className="text-lg font-bold text-sky-400 mt-1">
+                        {feedbackList.length > 0 
+                          ? Math.round((feedbackList.filter(f => f.setujuDiteruskan === 'Ya').length / feedbackList.length) * 100)
+                          : 100}% Bersetuju (Ya)
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">Cadangan Penerusan Program</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section B: Analysis by 8 Aspects */}
+                <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+                  <h3 className="text-base sm:text-lg font-bold text-white mb-2 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-blue-400" />
+                    <span>B. Skor Purata 8 Aspek Penilaian Bengkel (Skala 1 - 5)</span>
+                  </h3>
+                  <p className="text-slate-400 text-xs mb-6">Skala: 1 (Sangat Tidak Memuaskan) hingga 5 (Sangat Baik)</p>
+
+                  <div className="space-y-4">
+                    {ASPEK_PENILAIAN.map((asp) => {
+                      const totalResponses = feedbackList.length;
+                      const sum = feedbackList.reduce((acc, f) => acc + (f.ratings[asp.key] || 5), 0);
+                      const avg = totalResponses > 0 ? (sum / totalResponses).toFixed(2) : '5.00';
+                      const pct = Math.round((Number(avg) / 5) * 100);
+
+                      return (
+                        <div key={asp.key} className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                            <span className="font-semibold text-white text-sm">
+                              {asp.no}. {asp.label}
+                            </span>
+                            <span className="font-mono text-sm font-bold text-blue-400">
+                              {avg} / 5.00 <span className="text-slate-500 font-normal text-xs">({pct}%)</span>
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-950 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                            <div 
+                              className="bg-gradient-to-r from-blue-600 to-sky-400 h-full rounded-full transition-all duration-500" 
+                              style={{ width: `${pct}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Section C: Impak Bengkel Percentages */}
+                <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+                  <h3 className="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <CheckSquare className="w-5 h-5 text-blue-400" />
+                    <span>C. Analisis Impak Bengkel Terhadap Peserta</span>
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {SENARAI_IMPAK.map((imp) => {
+                      const agreedCount = feedbackList.filter(f => f.impak[imp.key]).length;
+                      const pct = feedbackList.length > 0 ? Math.round((agreedCount / feedbackList.length) * 100) : 100;
+
+                      return (
+                        <div key={imp.key} className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex items-start gap-3">
+                          <CheckCircle2 className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <p className="text-xs text-slate-200 leading-relaxed">{imp.label}</p>
+                            <p className="text-xs font-mono text-blue-400 font-bold mt-1.5">
+                              {agreedCount} / {feedbackList.length} Responden ({pct}%)
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Section D: Comments & Suggestions List */}
+                <div className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
+                  <h3 className="text-base sm:text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <MessageSquare className="w-5 h-5 text-blue-400" />
+                    <span>D. Pandangan, Perkara Bermanfaat & Cadangan Penambahbaikan</span>
+                  </h3>
+
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                    {feedbackList.map((f, idx) => (
+                      <div key={f.id} className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-xs space-y-2">
+                        <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-white">{idx + 1}. {f.namaPeserta}</span>
+                            <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 font-semibold text-[10px]">
+                              {f.kategori}
+                            </span>
+                          </div>
+                          <span className="text-slate-500 font-mono text-[11px]">{f.tarikhMasa}</span>
+                        </div>
+                        <div className="text-slate-300">
+                          <span className="font-semibold text-blue-400">Perkara Paling Bermanfaat:</span>
+                          <p className="mt-0.5 italic text-slate-300">"{f.palingBermanfaat || 'Tiada catatan khusus.'}"</p>
+                        </div>
+                        <div className="text-slate-300 pt-1">
+                          <span className="font-semibold text-blue-400">Cadangan Penambahbaikan:</span>
+                          <p className="mt-0.5 italic text-slate-300">"{f.cadanganPenambahbaikan || 'Tiada cadangan khusus.'}"</p>
+                        </div>
+                        <div className="flex items-center gap-4 text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
+                          <span>Penilaian: <strong className="text-white">{f.penilaianKeseluruhan}</strong></span>
+                          <span>Teruskan: <strong className="text-white">{f.setujuDiteruskan}</strong></span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            ) : (
+              /* View 2: The Interactive Feedback Form (Accessible to User and Admin) */
+              <div className="max-w-3xl mx-auto">
+                {feedbackSubmitted ? (
+                  /* Success Confirmation Screen */
+                  <div className="bg-slate-950 border border-blue-500/40 rounded-3xl p-8 sm:p-12 shadow-2xl text-center space-y-6">
+                    <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center mx-auto text-blue-400 border border-blue-500/30 shadow-lg shadow-blue-500/20">
+                      <CheckCircle2 className="w-10 h-10" />
+                    </div>
+
+                    <div>
+                      <span className="text-xs font-semibold uppercase tracking-widest text-blue-400">PENGESAHAN MAKLUM BALAS</span>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">Maklum Balas Berjaya Dihantar!</h2>
+                      <p className="text-slate-300 text-sm mt-3 max-w-lg mx-auto leading-relaxed">
+                        Terima kasih atas kerjasama dan maklum balas yang anda berikan untuk Bengkel Pengurusan Jenazah Peringkat SK Kepawa 2026.
+                      </p>
+                    </div>
+
+                    <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 max-w-md mx-auto text-xs text-slate-400 italic">
+                      "SK KEPAWA BERSAMA MEMACU KECEMERLANGAN"
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFeedbackSubmitted(false);
+                          setFeedbackForm({
+                            namaPeserta: '',
+                            kategori: 'GURU',
+                            ratings: { pengisian: 5, penceramah: 5, kefahaman: 5, demoMandi: 5, demoKafan: 5, solatJenazah: 5, kelancaran: 5, kemudahan: 5 },
+                            impak: { pengetahuanBaharu: true, tanggungjawabMuslim: true, tatacaraMandiKafan: true, caraSolatJenazah: true, kepentinganFarduKifayah: true },
+                            palingBermanfaat: '',
+                            cadanganPenambahbaikan: '',
+                            penilaianKeseluruhan: 'Sangat Baik',
+                            setujuDiteruskan: 'Ya',
+                          });
+                        }}
+                        className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium text-xs sm:text-sm border border-slate-700 transition-all cursor-pointer"
+                      >
+                        Hantar Maklum Balas Baru
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('scanner')}
+                        className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-blue-600/30 transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <UserCheck className="w-4 h-4" />
+                        <span>Kembali ke Isi Kehadiran</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Official Feedback Form Container */
+                  <form onSubmit={handleFeedbackSubmit} className="bg-slate-950 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl space-y-8 relative overflow-hidden">
+                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-sky-500 to-indigo-600"></div>
+
+                    {/* Official Document Header */}
+                    <div className="text-center border-b border-slate-800 pb-6">
+                      <div className="w-14 h-14 rounded-2xl bg-white p-1 flex items-center justify-center mx-auto mb-3 shadow-md border border-blue-500/30 overflow-hidden">
+                        <img 
+                          src="/assets/aistudio/Logo_Sekolah_Kebangsaan_Kepawa_Khaysar_Mohamad_Noor_f9b71c57.png" 
+                          alt="Logo SK Kepawa" 
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                      <p className="text-xs font-bold text-blue-400 uppercase tracking-widest">SEKOLAH KEBANGSAAN KEPAWA (XBA6019)</p>
+                      <h2 className="text-xl sm:text-2xl font-black text-white mt-1">BORANG MAKLUM BALAS</h2>
+                      <h3 className="text-sm sm:text-base font-bold text-blue-300 mt-0.5">BENGKEL PENGURUSAN JENAZAH</h3>
+                      <p className="text-xs font-semibold text-slate-400 uppercase mt-1">PERINGKAT SK KEPAWA TAHUN 2026</p>
+                      <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-slate-400 mt-2 font-mono">
+                        <span>Tarikh: <strong className="text-slate-200">05 November 2026 (Khamis)</strong></span>
+                        <span>•</span>
+                        <span>Tempat: <strong className="text-slate-200">Dewan Mini SK Kepawa, Beaufort</strong></span>
+                      </div>
+                    </div>
+
+                    {/* SECTION A: MAKLUMAT RESPONDEN */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                        <span className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 text-xs font-bold flex items-center justify-center">A</span>
+                        <h4 className="font-bold text-white text-base">MAKLUMAT RESPONDEN</h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold uppercase text-slate-400 mb-2">1. Kategori Responden *</label>
+                          <div className="grid grid-cols-2 gap-3">
+                            {(['GURU', 'AKP'] as const).map((kat) => {
+                              const isChecked = feedbackForm.kategori === kat;
+                              return (
+                                <button
+                                  type="button"
+                                  key={kat}
+                                  onClick={() => setFeedbackForm({ ...feedbackForm, kategori: kat })}
+                                  className={`p-3 rounded-xl border text-center font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                    isChecked
+                                      ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/30'
+                                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                                  }`}
+                                >
+                                  {isChecked ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 rounded-full border border-slate-600" />}
+                                  <span>{kat}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold uppercase text-slate-400 mb-2">2. Nama Peserta (Pilihan)</label>
+                          <select
+                            value={feedbackForm.namaPeserta}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, namaPeserta: e.target.value })}
+                            className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl py-2.5 px-3 text-white text-xs sm:text-sm focus:outline-none"
+                          >
+                            <option value="">-- Pilih Nama Staf atau Biarkan Tanpa Nama --</option>
+                            {participants.map(p => (
+                              <option key={p.id} value={p.namaPenuh}>{p.namaPenuh} ({p.jawatan})</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION B: PENILAIAN BENGKEL */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                        <span className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 text-xs font-bold flex items-center justify-center">B</span>
+                        <div>
+                          <h4 className="font-bold text-white text-base">PENILAIAN BENGKEL</h4>
+                          <p className="text-slate-400 text-xs">Sila tandakan (✓) pada tahap penilaian yang sesuai.</p>
+                        </div>
+                      </div>
+
+                      {/* Scale Legend */}
+                      <div className="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl text-xs text-slate-300 flex flex-wrap items-center justify-around gap-2 text-center">
+                        <span><strong>1</strong> – Sangat Tidak Memuaskan</span>
+                        <span className="text-slate-600">•</span>
+                        <span><strong>2</strong> – Tidak Memuaskan</span>
+                        <span className="text-slate-600">•</span>
+                        <span><strong>3</strong> – Memuaskan</span>
+                        <span className="text-slate-600">•</span>
+                        <span><strong>4</strong> – Baik</span>
+                        <span className="text-slate-600">•</span>
+                        <span><strong>5</strong> – Sangat Baik</span>
+                      </div>
+
+                      {/* Aspects Table */}
+                      <div className="space-y-3">
+                        {ASPEK_PENILAIAN.map((asp) => {
+                          const currentVal = feedbackForm.ratings[asp.key];
+                          return (
+                            <div key={asp.key} className="p-3.5 rounded-2xl bg-slate-900/70 border border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <span className="text-xs sm:text-sm text-slate-200 font-medium">
+                                <strong className="text-blue-400 mr-1.5">{asp.no}.</strong>
+                                {asp.label}
+                              </span>
+
+                              <div className="flex items-center space-x-1.5 shrink-0 justify-end">
+                                {[1, 2, 3, 4, 5].map((val) => {
+                                  const isSelected = currentVal === val;
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={val}
+                                      onClick={() => setFeedbackForm({
+                                        ...feedbackForm,
+                                        ratings: { ...feedbackForm.ratings, [asp.key]: val }
+                                      })}
+                                      className={`w-9 h-9 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center ${
+                                        isSelected
+                                          ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30 scale-105 border border-blue-400'
+                                          : 'bg-slate-950 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800'
+                                      }`}
+                                      title={`Tahap ${val}`}
+                                    >
+                                      {val}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* SECTION C: IMPAK BENGKEL */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                        <span className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 text-xs font-bold flex items-center justify-center">C</span>
+                        <div>
+                          <h4 className="font-bold text-white text-base">IMPAK BENGKEL</h4>
+                          <p className="text-slate-400 text-xs">Sila tandakan (✓) pada pernyataan yang sesuai.</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {SENARAI_IMPAK.map((imp) => {
+                          const isChecked = feedbackForm.impak[imp.key];
+                          return (
+                            <div
+                              key={imp.key}
+                              onClick={() => setFeedbackForm({
+                                ...feedbackForm,
+                                impak: { ...feedbackForm.impak, [imp.key]: !isChecked }
+                              })}
+                              className={`p-3.5 rounded-2xl border text-left cursor-pointer transition-all flex items-start gap-3 ${
+                                isChecked
+                                  ? 'bg-blue-950/40 border-blue-500/50 text-white'
+                                  : 'bg-slate-900 border-slate-800/80 text-slate-400 hover:text-slate-200'
+                              }`}
+                            >
+                              <div className={`w-5 h-5 rounded-lg border mt-0.5 flex items-center justify-center shrink-0 transition-all ${
+                                isChecked ? 'bg-blue-600 border-blue-500 text-white' : 'border-slate-600'
+                              }`}>
+                                {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                              </div>
+                              <span className="text-xs sm:text-sm font-medium leading-relaxed">{imp.label}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* SECTION D: CADANGAN DAN PENAMBAHBAIKAN */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                        <span className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 text-xs font-bold flex items-center justify-center">D</span>
+                        <h4 className="font-bold text-white text-base">CADANGAN DAN PENAMBAHBAIKAN</h4>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            1. Apakah perkara paling bermanfaat yang anda pelajari daripada bengkel ini?
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={feedbackForm.palingBermanfaat}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, palingBermanfaat: e.target.value })}
+                            placeholder="Nyatakan perkara paling bermakna yang anda perolehi..."
+                            className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl p-3 text-white text-xs sm:text-sm focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                            2. Apakah cadangan anda untuk penambahbaikan bengkel pada masa akan datang?
+                          </label>
+                          <textarea
+                            rows={3}
+                            value={feedbackForm.cadanganPenambahbaikan}
+                            onChange={(e) => setFeedbackForm({ ...feedbackForm, cadanganPenambahbaikan: e.target.value })}
+                            placeholder="Sertakan cadangan atau idea penambahbaikan anda..."
+                            className="w-full bg-slate-900 border border-slate-700 focus:border-blue-500 rounded-xl p-3 text-white text-xs sm:text-sm focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SECTION E: PENILAIAN KESELURUHAN */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+                        <span className="w-6 h-6 rounded-lg bg-blue-500/20 text-blue-400 text-xs font-bold flex items-center justify-center">E</span>
+                        <h4 className="font-bold text-white text-base">PENILAIAN KESELURUHAN</h4>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-2">
+                          1. Secara keseluruhan, bagaimanakah penilaian anda terhadap bengkel ini?
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                          {(['Sangat Baik', 'Baik', 'Memuaskan', 'Kurang Memuaskan'] as const).map((tahap) => {
+                            const isSelected = feedbackForm.penilaianKeseluruhan === tahap;
+                            return (
+                              <button
+                                type="button"
+                                key={tahap}
+                                onClick={() => setFeedbackForm({ ...feedbackForm, penilaianKeseluruhan: tahap })}
+                                className={`p-3 rounded-xl border text-center font-bold text-xs transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/30'
+                                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                {tahap}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-300 mb-2">
+                          2. Adakah anda bersetuju bengkel seumpama ini diteruskan pada masa akan datang?
+                        </label>
+                        <div className="grid grid-cols-2 gap-3 max-w-sm">
+                          {(['Ya', 'Tidak'] as const).map((jawapan) => {
+                            const isSelected = feedbackForm.setujuDiteruskan === jawapan;
+                            return (
+                              <button
+                                type="button"
+                                key={jawapan}
+                                onClick={() => setFeedbackForm({ ...feedbackForm, setujuDiteruskan: jawapan })}
+                                className={`p-3 rounded-xl border text-center font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                                  isSelected
+                                    ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-600/30'
+                                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                                }`}
+                              >
+                                {isSelected ? <CheckCircle2 className="w-4 h-4" /> : <div className="w-4 h-4 rounded-full border border-slate-600" />}
+                                <span>{jawapan}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Official Document Tagline & Submit Button */}
+                    <div className="pt-6 border-t border-slate-800 text-center space-y-4">
+                      <div className="text-xs text-slate-400 space-y-1">
+                        <p className="font-bold text-slate-300 uppercase tracking-wider">TERIMA KASIH ATAS KERJASAMA DAN MAKLUM BALAS ANDA.</p>
+                        <p className="italic text-blue-400">SK KEPAWA BERSAMA MEMACU KECEMERLANGAN</p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                        <button
+                          type="submit"
+                          className="px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-2xl shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <Send className="w-4 h-4" />
+                          <span>Hantar Borang Maklum Balas</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleResetFeedbackFormFields}
+                          className="px-5 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-semibold text-sm rounded-2xl border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                          title="Kosongkan semua medan borang ini"
+                        >
+                          <RefreshCw className="w-4 h-4 text-slate-400" />
+                          <span>Kosongkan Borang</span>
+                        </button>
+                        {roleMode === 'admin' && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFeedbackResetPin('');
+                              setFeedbackResetError(null);
+                              setIsFeedbackResetModalOpen(true);
+                            }}
+                            className="px-5 py-3.5 bg-red-950/70 hover:bg-red-900 text-red-200 font-semibold text-sm rounded-2xl border border-red-700/60 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-red-950/20"
+                            title="Set semula semua rekod maklum balas dari pangkalan data (Khusus Admin)"
+                          >
+                            <RotateCcw className="w-4 h-4 text-red-400" />
+                            <span>Set Semula Rekod (Admin)</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handlePrintFeedbackReport}
+                          className="px-5 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-semibold text-sm rounded-2xl border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                          title="Cetak laporan analisis maklum balas rasmi"
+                        >
+                          <Printer className="w-4 h-4 text-blue-400" />
+                          <span>Cetak Laporan</span>
+                        </button>
+                      </div>
+                    </div>
+
+                  </form>
+                )}
+              </div>
+            )}
 
           </div>
         )}
@@ -1603,10 +2929,12 @@ export default function App() {
                   <span>Muat Turun Fail PDF</span>
                 </button>
                 <button
-                  onClick={() => window.print()}
-                  className="bg-slate-800 hover:bg-slate-700 text-white px-5 py-3 rounded-xl font-semibold text-sm transition-all border border-slate-700 flex items-center gap-2 cursor-pointer"
+                  type="button"
+                  onClick={handlePrintAttendanceReport}
+                  className="bg-slate-800 hover:bg-slate-700 text-white px-5 py-3 rounded-xl font-semibold text-sm transition-all border border-slate-700 flex items-center gap-2 cursor-pointer shadow-md"
+                  title="Cetak Laporan Rasmi Kehadiran"
                 >
-                  <Printer className="w-4 h-4" />
+                  <Printer className="w-4 h-4 text-blue-400" />
                   <span>Cetak Terus</span>
                 </button>
               </div>
@@ -2126,6 +3454,142 @@ export default function App() {
         </div>
       )}
 
+      {/* ==================== RESET ALL FEEDBACK MODAL (ADMIN) ==================== */}
+      {isFeedbackResetModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
+          <div className="bg-slate-950 border border-red-900/60 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative text-center">
+            
+            <div className="w-16 h-16 bg-red-500/10 text-red-400 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-500/30 shadow-lg shadow-red-950/40">
+              <RotateCcw className="w-8 h-8 text-red-400 animate-pulse" />
+            </div>
+
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-300 text-xs font-semibold mb-2">
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>Tindakan Pentadbir (Admin Sahaja)</span>
+            </div>
+
+            <h3 className="text-xl font-bold text-white mt-1">Set Semula Data Maklum Balas?</h3>
+            <p className="text-slate-300 text-xs sm:text-sm mt-2 leading-relaxed">
+              Pilih mod tetapan semula bagi semua rekod borang maklum balas Bengkel Pengurusan Jenazah SK Kepawa 2026.
+            </p>
+
+            {/* Current feedback stats */}
+            <div className="my-4 p-4 rounded-2xl bg-slate-900 border border-slate-800 text-left space-y-2 text-xs">
+              <div className="flex justify-between items-center text-slate-300">
+                <span>Jumlah Maklum Balas Semasa:</span>
+                <span className="font-bold text-blue-400 font-mono">{feedbackList.length} Responden</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-400 text-[11px]">
+                <span>Pecahan Kategori:</span>
+                <span>Guru: {feedbackList.filter(f => f.kategori === 'GURU').length} | AKP: {feedbackList.filter(f => f.kategori === 'AKP').length}</span>
+              </div>
+            </div>
+
+            {/* Reset Mode Selection */}
+            <div className="text-left space-y-2 mb-4">
+              <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Pilih Mod Set Semula:
+              </label>
+              <div 
+                onClick={() => setFeedbackResetMode('empty')}
+                className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5 ${
+                  feedbackResetMode === 'empty'
+                    ? 'bg-red-950/40 border-red-500/60 text-white'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center shrink-0 ${
+                  feedbackResetMode === 'empty' ? 'border-red-500 bg-red-600' : 'border-slate-600'
+                }`}>
+                  {feedbackResetMode === 'empty' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                </div>
+                <div>
+                  <span className="font-bold text-red-300 block">Kosongkan Semua (0 Maklum Balas)</span>
+                  <span className="text-[11px] text-slate-400">Padam semua rekod dari pangkalan data awan untuk mulakan sesi maklum balas yang bersih.</span>
+                </div>
+              </div>
+
+              <div 
+                onClick={() => setFeedbackResetMode('default')}
+                className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-start gap-2.5 ${
+                  feedbackResetMode === 'default'
+                    ? 'bg-blue-950/40 border-blue-500/60 text-white'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center shrink-0 ${
+                  feedbackResetMode === 'default' ? 'border-blue-500 bg-blue-600' : 'border-slate-600'
+                }`}>
+                  {feedbackResetMode === 'default' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                </div>
+                <div>
+                  <span className="font-bold text-blue-300 block">Set Semula ke Contoh Asal</span>
+                  <span className="text-[11px] text-slate-400">Muat semula data contoh standard bengkel untuk tujuan semakan dan demonstrasi.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Admin PIN input */}
+            <div className="text-left space-y-1.5 mb-5">
+              <label className="block text-xs font-semibold text-slate-300">
+                Pengesahan PIN Admin SK Kepawa:
+              </label>
+              <div className="relative">
+                <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="password"
+                  value={feedbackResetPin}
+                  onChange={(e) => setFeedbackResetPin(e.target.value.toUpperCase())}
+                  placeholder="Masukkan PIN Admin (XBA6019)..."
+                  className="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl py-2.5 pl-10 pr-4 text-white text-sm font-mono tracking-wider focus:outline-none"
+                  autoFocus
+                />
+              </div>
+              {feedbackResetError && (
+                <p className="text-red-400 text-xs font-medium flex items-center gap-1 mt-1">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{feedbackResetError}</span>
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsFeedbackResetModalOpen(false);
+                  setFeedbackResetPin('');
+                  setFeedbackResetError(null);
+                }}
+                disabled={isFeedbackResetting}
+                className="flex-1 py-2.5 px-4 rounded-xl text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 text-sm font-medium transition-all cursor-pointer disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteFeedbackReset}
+                disabled={isFeedbackResetting}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-semibold shadow-lg shadow-red-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {isFeedbackResetting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Mengeset Semula...</span>
+                  </>
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" />
+                    <span>Sahkan Set Semula</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* Floating Toast Notification */}
       {toastNotification && (
         <div className="fixed top-5 right-5 z-50 max-w-sm sm:max-w-md animate-fadeIn shadow-2xl">
@@ -2157,7 +3621,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="bg-slate-950 border-t border-slate-800 py-6 text-center text-xs text-slate-500 print:hidden">
-        <p>Sistem Rasmi Kehadiran Bengkel Pengurusan Jenazah Peringkat SK Kepawa 2026 • Pentadbir: {currentAdmin.namaPenuh}</p>
+        <p>Sistem Rasmi Kehadiran & Maklum Balas Bengkel Pengurusan Jenazah Peringkat SK Kepawa 2026 • Pentadbir: {currentAdmin.namaPenuh}</p>
       </footer>
 
     </div>
